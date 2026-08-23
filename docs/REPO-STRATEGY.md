@@ -37,6 +37,10 @@ git push origin main   # material-mail-full（私有）
 git push oss main      # material-mail（公开）
 ```
 
+**网络兜底（本机 github.com 的 git/SSH 端口被阻断时）**：
+`tools/push-via-api.ps1 -Repo <repo>` 通过 api.github.com 的 Git Data API
+逐提交回放，对象 SHA 与本地完全一致（内容寻址），历史无损。
+
 **pro/ 落地后**：改为发布脚本（基于 git filter-repo 剔除 pro/ 历史），
 见 `tools/publish-community.ps1`。
 

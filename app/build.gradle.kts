@@ -13,8 +13,15 @@ android {
 
 dependencies {
     implementation(project(":designsystem"))
-    // 阶段 0：feature 模块暂不挂 UI，后续阶段接线
+    implementation(project(":feature:inbox"))
+    implementation(project(":core:model"))
+    implementation(project(":core:database"))
+    implementation(project(":core:sync"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.compose.material.icons.extended)
 }

@@ -11,6 +11,8 @@ data class Thread(
     val id: ThreadId,
     val accountId: AccountId,
     val subject: String,
+    /** 列表预览行：取线程内最新消息的正文摘要，正文未加载时为空串。 */
+    val snippet: String,
     val participants: List<Participant>,
     val messageCount: Int,
     val lastMessageAt: Instant,

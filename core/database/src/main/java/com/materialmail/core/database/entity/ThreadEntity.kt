@@ -21,6 +21,7 @@ data class ThreadEntity(
     @PrimaryKey val id: String,
     val accountId: String,
     val subject: String,
+    val snippet: String,
     /** Participant 列表的 JSON。 */
     val participantsJson: String,
     val messageCount: Int,

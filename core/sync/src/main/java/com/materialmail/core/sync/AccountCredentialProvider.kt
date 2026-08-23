@@ -9,6 +9,6 @@ import com.materialmail.core.model.Account
  *
  * 返回 null 表示凭据缺失或已失效 → 同步跳过该账户，不重试、不猜测。
  */
-interface AccountCredentialProvider {
+fun interface AccountCredentialProvider {
     suspend fun credentialsFor(account: Account): AuthCredentials?
 }

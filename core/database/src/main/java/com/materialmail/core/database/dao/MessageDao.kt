@@ -14,6 +14,9 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE threadId = :threadId ORDER BY sentAtEpochMs ASC")
     fun observeByThread(threadId: String): Flow<List<MessageEntity>>
 
+    @Query("SELECT * FROM messages WHERE threadId = :threadId ORDER BY sentAtEpochMs ASC")
+    suspend fun getByThread(threadId: String): List<MessageEntity>
+
     @Query("SELECT * FROM messages WHERE folderId = :folderId ORDER BY sentAtEpochMs DESC")
     fun observeByFolder(folderId: String): Flow<List<MessageEntity>>
 

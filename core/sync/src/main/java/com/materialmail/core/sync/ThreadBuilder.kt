@@ -61,6 +61,7 @@ class ThreadBuilder(private val database: MaterialMailDatabase) {
             )
         }
 
+        currentMessagesByHeader = deduped.associateBy { it.messageIdHeader }
         val roots = Threader.thread(inputs)
 
         val threadEntities = mutableListOf<ThreadEntity>()
@@ -77,6 +78,8 @@ class ThreadBuilder(private val database: MaterialMailDatabase) {
                 subject = Threader.normalizeSubject(
                     root.message?.subject ?: members.first().subject,
                 ),
+                // 预览行取最新消息的正文摘要（正文未加载为空串，详情页打开后随下次重建刷新）
+                snippet = entitySnippet(currentMessagesByHeader, latest.messageIdHeader),
                 participantsJson = Converters.participantsToJson(
                     members.distinctBy { it.fromAddress }
                         .map { com.materialmail.core.model.Participant(it.fromAddress, it.fromName) },
@@ -102,6 +105,12 @@ class ThreadBuilder(private val database: MaterialMailDatabase) {
             threadEntities.map { it.id }.ifEmpty { listOf("__none__") },
         )
     }
+
+    /** 最新消息的 snippet 需要回查实体（ThreadingInput 不带摘要，保持 threading 输入纯粹）。 */
+    private fun entitySnippet(
+        messagesByHeader: Map<String, MessageEntity>,
+        messageIdHeader: String,
+    ): String = messagesByHeader[messageIdHeader]?.snippet ?: ""
 
     private fun flatten(node: ThreadNode): List<ThreadingInput> =
         listOfNotNull(node.message) + node.children.flatMap(::flatten)

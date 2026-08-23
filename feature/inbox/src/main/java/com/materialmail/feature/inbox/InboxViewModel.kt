@@ -52,6 +52,7 @@ sealed interface InboxUiState {
 /** 一次性 UI 事件（Snackbar）。 */
 sealed interface InboxEvent {
     data class Archived(val threadSubject: String) : InboxEvent
+    data class Deleted(val threadSubject: String) : InboxEvent
 }
 
 class InboxViewModel(
@@ -61,7 +62,7 @@ class InboxViewModel(
     private val onManualRefresh: () -> Unit,
 ) : ViewModel() {
 
-    private var lastArchiveSnapshot: MessageActionPerformer.ThreadMoveSnapshot? = null
+    private var lastMoveSnapshot: MessageActionPerformer.ThreadMoveSnapshot? = null
 
     val events = MutableSharedFlow<InboxEvent>(extraBufferCapacity = 1)
 
@@ -87,15 +88,26 @@ class InboxViewModel(
         viewModelScope.launch {
             val snapshot = actionPerformer.archiveThread(ThreadId(threadId))
             if (snapshot != null) {
-                lastArchiveSnapshot = snapshot
+                lastMoveSnapshot = snapshot
                 events.emit(InboxEvent.Archived(subject))
             }
         }
     }
 
-    fun undoArchive() {
-        val snapshot = lastArchiveSnapshot ?: return
-        lastArchiveSnapshot = null
+    /** 滑动删除：移入垃圾箱（非永久删除），同样可 Undo。 */
+    fun deleteThread(threadId: String, subject: String) {
+        viewModelScope.launch {
+            val snapshot = actionPerformer.deleteThread(ThreadId(threadId))
+            if (snapshot != null) {
+                lastMoveSnapshot = snapshot
+                events.emit(InboxEvent.Deleted(subject))
+            }
+        }
+    }
+
+    fun undoMove() {
+        val snapshot = lastMoveSnapshot ?: return
+        lastMoveSnapshot = null
         viewModelScope.launch { actionPerformer.restore(snapshot) }
     }
 

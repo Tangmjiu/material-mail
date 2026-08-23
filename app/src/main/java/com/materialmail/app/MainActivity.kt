@@ -19,6 +19,8 @@ import com.materialmail.feature.inbox.InboxScreen
 import com.materialmail.feature.inbox.InboxViewModel
 import com.materialmail.feature.inbox.ThreadDetailScreen
 import com.materialmail.feature.inbox.ThreadDetailViewModel
+import com.materialmail.feature.inbox.SearchScreen
+import com.materialmail.feature.inbox.SearchViewModel
 import com.materialmail.core.model.DraftId
 import com.materialmail.core.model.MessageId
 import com.materialmail.core.model.ThreadId
@@ -73,6 +75,22 @@ fun MaterialMailNavHost(
                     },
                     onAddAccount = { navController.navigate(AccountRoutes.ADD_ACCOUNT) },
                     onCompose = { navController.navigate(ComposerRoutes.new()) },
+                    onSearch = { navController.navigate(InboxRoutes.SEARCH) },
+                )
+            }
+            composable(InboxRoutes.SEARCH) {
+                val viewModel: SearchViewModel = viewModel(
+                    factory = SearchViewModel.factory(
+                        searchProvider = container.searchProvider,
+                        database = container.database,
+                    ),
+                )
+                SearchScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenThread = { threadId ->
+                        navController.navigate(InboxRoutes.threadDetail(threadId))
+                    },
                 )
             }
             composable(AccountRoutes.ADD_ACCOUNT) {

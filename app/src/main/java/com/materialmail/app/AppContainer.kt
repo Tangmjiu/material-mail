@@ -2,6 +2,7 @@ package com.materialmail.app
 
 import android.content.Context
 import com.materialmail.core.crypto.CredentialStore
+import com.materialmail.core.search.FtsSearchProvider
 import com.materialmail.core.crypto.StoredCredential
 import com.materialmail.core.database.BodyStore
 import com.materialmail.core.database.DatabaseFactory
@@ -40,4 +41,5 @@ class AppContainer(context: Context) {
     val actionPerformer: MessageActionPerformer =
         MessageActionPerformer(database, credentialProvider)
     val messageSender: MessageSender = MessageSender(database, credentialProvider)
+    val searchProvider: FtsSearchProvider = FtsSearchProvider(database)
 }

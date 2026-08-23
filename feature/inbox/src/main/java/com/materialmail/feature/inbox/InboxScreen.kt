@@ -3,6 +3,10 @@ package com.materialmail.feature.inbox
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,8 +22,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +33,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -74,10 +82,21 @@ fun InboxScreen(
     onOpenThread: (threadId: String) -> Unit,
     onAddAccount: () -> Unit,
     onCompose: () -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Android 13+：进入可用态时请求一次通知权限；用户拒绝后不再追问（设置中可自行开启）
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
+    LaunchedEffect(uiState is InboxUiState.Ready) {
+        if (uiState is InboxUiState.Ready && Build.VERSION.SDK_INT >= 33) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -88,9 +107,15 @@ fun InboxScreen(
                         actionLabel = "撤销",
                         withDismissAction = true,
                     )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        viewModel.undoArchive()
-                    }
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoMove()
+                }
+                is InboxEvent.Deleted -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "已移入垃圾箱：" + event.threadSubject,
+                        actionLabel = "撤销",
+                        withDismissAction = true,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoMove()
                 }
             }
         }
@@ -99,6 +124,24 @@ fun InboxScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            if (uiState is InboxUiState.Ready) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = true,
+                        onClick = { },
+                        icon = { Icon(Icons.Outlined.Inbox, contentDescription = null) },
+                        label = { Text("收件箱", style = MailTypeScale.meta) },
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onSearch,
+                        icon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                        label = { Text("搜索", style = MailTypeScale.meta) },
+                    )
+                }
+            }
+        },
         floatingActionButton = {
             // 设计规范 §5.7：右下角大号 FAB（写信），28dp Expressive 圆角
             if (uiState is InboxUiState.Ready) {
@@ -182,30 +225,39 @@ private fun ThreadList(
         items(items = threads, key = { it.threadId }) { thread ->
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
-                    if (value == SwipeToDismissBoxValue.EndToStart) {
-                        // 行不直接滑走：归档完成后由数据库状态驱动消失 + 邻近行 spring 补位
-                        viewModel.archiveThread(thread.threadId, thread.subject)
-                        false
-                    } else {
-                        false
+                    // 行不直接滑走：操作完成后由数据库状态驱动消失 + 邻近行 spring 补位
+                    when (value) {
+                        SwipeToDismissBoxValue.EndToStart ->
+                            viewModel.archiveThread(thread.threadId, thread.subject)
+                        SwipeToDismissBoxValue.StartToEnd ->
+                            viewModel.deleteThread(thread.threadId, thread.subject)
+                        else -> Unit
                     }
+                    false
                 },
             )
             SwipeToDismissBox(
                 state = dismissState,
-                enableDismissFromStartToEnd = false,
                 backgroundContent = {
+                    val deleting = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .padding(end = MailTheme.spacing.xl),
-                        contentAlignment = Alignment.CenterEnd,
+                            .background(
+                                if (deleting) MaterialTheme.colorScheme.errorContainer
+                                else MaterialTheme.colorScheme.primaryContainer,
+                            )
+                            .padding(horizontal = MailTheme.spacing.xl),
+                        contentAlignment = if (deleting) Alignment.CenterStart else Alignment.CenterEnd,
                     ) {
                         Icon(
-                            Icons.Outlined.Archive,
-                            contentDescription = "归档",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            if (deleting) Icons.Outlined.Delete else Icons.Outlined.Archive,
+                            contentDescription = if (deleting) "删除" else "归档",
+                            tint = if (deleting) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            },
                         )
                     }
                 },

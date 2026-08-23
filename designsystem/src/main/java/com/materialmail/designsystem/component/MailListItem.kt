@@ -12,6 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.materialmail.designsystem.theme.MailTheme
@@ -30,7 +32,15 @@ fun MailListItem(
     unread: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier.fillMaxWidth()) {
+    // 无障碍（设计 §5.8 检查单）：读屏用户看不到 Unread Spine 和字重，
+    // 用 stateDescription 显式播报读/未读；合并子节点保证朗读顺序 = 视觉顺序
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                stateDescription = if (unread) "未读" else "已读"
+            },
+    ) {
         UnreadSpine(unread = unread, modifier = Modifier.align(Alignment.CenterVertically))
         Column(
             modifier = Modifier

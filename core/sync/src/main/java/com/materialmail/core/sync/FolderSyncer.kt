@@ -92,6 +92,7 @@ class FolderSyncer(private val database: MaterialMailDatabase) {
             fromJson = com.materialmail.core.database.Converters.participantsToJson(
                 from.ifEmpty { listOf(com.materialmail.core.model.Participant("unknown", null)) },
             ),
+            fromAddress = from.firstOrNull()?.address ?: "unknown",
             toJson = com.materialmail.core.database.Converters.participantsToJson(to),
             ccJson = com.materialmail.core.database.Converters.participantsToJson(cc),
             bccJson = "[]",

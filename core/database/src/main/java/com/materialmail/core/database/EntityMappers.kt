@@ -115,6 +115,7 @@ fun Message.toEntity(): MessageEntity = MessageEntity(
     inReplyTo = inReplyTo,
     referencesJson = Converters.stringListToJson(references),
     fromJson = Converters.participantsToJson(listOf(from)),
+    fromAddress = from.address,
     toJson = Converters.participantsToJson(to),
     ccJson = Converters.participantsToJson(cc),
     bccJson = Converters.participantsToJson(bcc),

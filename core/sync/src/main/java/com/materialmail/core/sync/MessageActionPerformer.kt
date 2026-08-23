@@ -31,14 +31,24 @@ class MessageActionPerformer(
     )
 
     /** 归档线程：本地立即移动到 Archive，远端尽力同步。返回 Undo 快照。 */
-    suspend fun archiveThread(threadId: ThreadId): ThreadMoveSnapshot? {
+    suspend fun archiveThread(threadId: ThreadId): ThreadMoveSnapshot? =
+        moveThreadToRole(threadId, FolderRole.ARCHIVE)
+
+    /** 删除线程：移入 Trash（不是永久删除；永久删除永远需要显式确认）。 */
+    suspend fun deleteThread(threadId: ThreadId): ThreadMoveSnapshot? =
+        moveThreadToRole(threadId, FolderRole.TRASH)
+
+    private suspend fun moveThreadToRole(
+        threadId: ThreadId,
+        targetRole: FolderRole,
+    ): ThreadMoveSnapshot? {
         val thread = database.threadDao().getById(threadId.value) ?: return null
         val messages = database.messageDao().getByThread(threadId.value)
         if (messages.isEmpty()) return null
 
         val archiveFolder = database.folderDao()
-            .findByRole(thread.accountId, FolderRole.ARCHIVE.name)
-            ?: return null // 没有归档文件夹的账户（少见）：不执行，由 UI 提示
+            .findByRole(thread.accountId, targetRole.name)
+            ?: return null // 没有目标文件夹的账户（少见）：不执行，由 UI 提示
 
         val snapshot = ThreadMoveSnapshot(
             threadId = threadId,

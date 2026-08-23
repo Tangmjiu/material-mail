@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:sync"))
     implementation(project(":core:crypto"))
+    implementation(project(":core:search"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

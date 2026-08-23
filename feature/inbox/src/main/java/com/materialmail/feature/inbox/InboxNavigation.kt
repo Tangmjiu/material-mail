@@ -4,6 +4,7 @@ package com.materialmail.feature.inbox
 object InboxRoutes {
     const val INBOX = "inbox"
     const val THREAD_DETAIL = "thread/{threadId}"
+    const val SEARCH = "search"
 
     fun threadDetail(threadId: String): String = "thread/$threadId"
 }

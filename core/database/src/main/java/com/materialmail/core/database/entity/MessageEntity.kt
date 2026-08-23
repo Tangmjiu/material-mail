@@ -46,6 +46,8 @@ data class MessageEntity(
     /** References 头列表的 JSON。 */
     val referencesJson: String,
     val fromJson: String,
+    /** 发件人地址冗余列：FTS 索引与列表筛选用（fromJson 的扁平化）。 */
+    val fromAddress: String,
     val toJson: String,
     val ccJson: String,
     val bccJson: String,

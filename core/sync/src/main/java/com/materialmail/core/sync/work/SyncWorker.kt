@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.materialmail.core.sync.SyncEngine
+import com.materialmail.core.sync.notification.NewMailNotifier
 import com.materialmail.core.sync.SyncResult
 
 /**
@@ -23,8 +24,13 @@ class SyncWorker(
 
     override suspend fun doWork(): Result {
         val engine = SyncEngineLocator.instance ?: return Result.failure()
-        return when (engine.syncAll()) {
-            is SyncResult.Failure -> if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+        return when (val result = engine.syncAll()) {
+            is SyncResult.Failure ->
+                if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+            is SyncResult.Success -> {
+                NewMailNotifier(applicationContext).notifyNewMail(result.newMessageCount)
+                Result.success()
+            }
             else -> Result.success()
         }
     }

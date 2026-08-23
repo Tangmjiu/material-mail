@@ -30,6 +30,9 @@ object DatabaseFactory {
             passphrase.fill(' ')
             builder.openHelperFactory(SupportFactory(passphraseBytes))
         }
+        // 预发布期策略：schema 变更直接重建（v1→v2 无线上用户）。
+        // 首次公开发布前必须替换为正式 Migration 链。
+        builder.fallbackToDestructiveMigration(true)
         return builder.build()
     }
 }

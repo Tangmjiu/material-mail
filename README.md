@@ -51,4 +51,10 @@ JDK 17+，Android SDK 36。中国大陆环境已默认配置阿里云 Maven 镜�
 
 ## License
 
-待定（开源许可证将在首次公开发布前确定并写入 LICENSE）。
+**MPL-2.0**（Mozilla Public License 2.0）——见 [LICENSE](LICENSE)。
+
+文件级 copyleft：对社区版源文件的修改必须以 MPL-2.0 回馈社区，
+但允许与闭源文件（如 Pro 模块）链接共存。
+
+提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 中的
+贡献者许可协议（CLA），提交即视为同意。

@@ -9,3 +9,16 @@
 .cxx
 local.properties
 **/build/
+
+# ── 机密与签名（任何仓库都不得提交）──
+*.keystore
+*.jks
+*.pem
+*.p12
+signing.properties
+secrets.properties
+.env
+**/google-services.json
+
+# ── Pro 闭源码在私有仓库正常提交；本规则仅防御"社区版发布脚本"误打包 ──
+# （pro/ 目录不忽略，同步时由 tools/publish-community 按路径剔除）

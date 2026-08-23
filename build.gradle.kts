@@ -27,8 +27,13 @@ tasks.register("checkModuleBoundaries") {
                 dep.startsWith(":core:") || dep == ":designsystem"
             projectPath.startsWith(":feature:") ->
                 dep.startsWith(":core:") || dep == ":designsystem" || dep == ":region" || dep == ":agent"
-            else -> true
-        }
+            // Community 壳物理上不得依赖 Pro
+            projectPath == ":app" -> !dep.startsWith(":pro:")
+            // Pro 只依赖 Core/设计系统/能力层/Pro 自身，不反向依赖 Community feature
+            projectPath.startsWith(":pro:") ->
+                dep.startsWith(":core:") || dep == ":designsystem" ||
+                    dep == ":agent" || dep == ":region" || dep.startsWith(":pro:")
+            else -> true        }
         rootProject.subprojects.forEach { p ->
             p.configurations.forEach { c ->
                 c.dependencies.withType(org.gradle.api.artifacts.ProjectDependency::class.java).forEach { dep ->

@@ -47,3 +47,13 @@ include(":feature:account")
 // ── Agent / Region（独立可摘除模块）─────────
 include(":agent")
 include(":region")
+
+// ── Pro（闭源，仅私有完整产品仓库存在 pro/ 目录）─────────────
+// 双重保护：目录存在性 + 显式开关。开源社区版仓库没有 pro/ 目录，
+// 物理上不可能把 Pro 代码编进 Community 产物（Open Core 铁律）。
+val proEnabled = providers.gradleProperty("materialmail.includePro").orNull?.toBoolean() ?: true
+if (proEnabled && java.io.File(rootDir, "pro").isDirectory) {
+    // 未来 Pro 模块在此注册，例如：
+    // include(":pro:licensing")
+    // include(":pro:connectors:feishu")
+}

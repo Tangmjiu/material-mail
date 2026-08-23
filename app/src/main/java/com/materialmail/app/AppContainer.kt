@@ -10,6 +10,7 @@ import com.materialmail.core.mail.imap.AuthCredentials
 import com.materialmail.core.sync.AccountCredentialProvider
 import com.materialmail.core.sync.BodyLoader
 import com.materialmail.core.sync.MessageActionPerformer
+import com.materialmail.core.sync.MessageSender
 import com.materialmail.core.sync.SyncEngine
 
 /**
@@ -38,4 +39,5 @@ class AppContainer(context: Context) {
     val bodyLoader: BodyLoader = BodyLoader(database, bodyStore, credentialProvider)
     val actionPerformer: MessageActionPerformer =
         MessageActionPerformer(database, credentialProvider)
+    val messageSender: MessageSender = MessageSender(database, credentialProvider)
 }

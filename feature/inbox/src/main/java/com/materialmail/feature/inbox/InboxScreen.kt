@@ -19,10 +19,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -71,6 +73,7 @@ fun InboxScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onOpenThread: (threadId: String) -> Unit,
     onAddAccount: () -> Unit,
+    onCompose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +99,17 @@ fun InboxScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            // 设计规范 §5.7：右下角大号 FAB（写信），28dp Expressive 圆角
+            if (uiState is InboxUiState.Ready) {
+                LargeFloatingActionButton(
+                    onClick = onCompose,
+                    shape = MaterialTheme.shapes.extraLarge,
+                ) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "写邮件")
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {

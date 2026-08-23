@@ -19,6 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Forward
+import androidx.compose.material.icons.automirrored.outlined.Reply
+import androidx.compose.material.icons.automirrored.outlined.ReplyAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,6 +54,9 @@ fun ThreadDetailScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
+    onReply: (messageId: String) -> Unit,
+    onReplyAll: (messageId: String) -> Unit,
+    onForward: (messageId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -78,6 +84,29 @@ fun ThreadDetailScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                    },
+                    actions = {
+                        val latestMessageId = uiState.messages.lastOrNull()?.messageId
+                        if (latestMessageId != null) {
+                            IconButton(onClick = { onReply(latestMessageId) }) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.Reply,
+                                    contentDescription = "回复",
+                                )
+                            }
+                            IconButton(onClick = { onReplyAll(latestMessageId) }) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.ReplyAll,
+                                    contentDescription = "回复全部",
+                                )
+                            }
+                            IconButton(onClick = { onForward(latestMessageId) }) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.Forward,
+                                    contentDescription = "转发",
+                                )
+                            }
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,

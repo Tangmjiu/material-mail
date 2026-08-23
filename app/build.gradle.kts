@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":designsystem"))
     implementation(project(":feature:inbox"))
     implementation(project(":feature:account"))
+    implementation(project(":feature:composer"))
     implementation(project(":core:model"))
     implementation(project(":core:database"))
     implementation(project(":core:sync"))

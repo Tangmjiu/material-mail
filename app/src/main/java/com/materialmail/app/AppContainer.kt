@@ -2,6 +2,11 @@ package com.materialmail.app
 
 import android.content.Context
 import com.materialmail.core.crypto.CredentialStore
+import com.materialmail.agent.audit.ActionLogReader
+import com.materialmail.agent.audit.ActionLogWriter
+import com.materialmail.agent.execution.ConfirmationGate
+import com.materialmail.agent.execution.ConfirmationTokenIssuer
+import com.materialmail.agent.permissions.AgentPermissionStore
 import com.materialmail.core.search.FtsSearchProvider
 import com.materialmail.core.crypto.StoredCredential
 import com.materialmail.core.database.BodyStore
@@ -42,4 +47,15 @@ class AppContainer(context: Context) {
         MessageActionPerformer(database, credentialProvider)
     val messageSender: MessageSender = MessageSender(database, credentialProvider)
     val searchProvider: FtsSearchProvider = FtsSearchProvider(database)
+
+    // ── Agent 地基（阶段 5）────────────────────────────
+    // 确认卡片 UI 后续阶段接入；Gate 现在就位，任何 Agent 操作的唯一入口
+    val agentPermissionStore = AgentPermissionStore(context)
+    val actionLogWriter = ActionLogWriter(database)
+    val actionLogReader = ActionLogReader(database)
+    val confirmationGate = ConfirmationGate(
+        permissionStore = agentPermissionStore,
+        tokenIssuer = ConfirmationTokenIssuer(),
+        audit = actionLogWriter,
+    )
 }

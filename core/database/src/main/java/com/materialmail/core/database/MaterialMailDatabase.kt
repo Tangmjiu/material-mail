@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.materialmail.core.database.dao.AccountDao
+import com.materialmail.core.database.dao.ActionLogDao
 import com.materialmail.core.database.dao.AttachmentDao
 import com.materialmail.core.database.dao.DraftDao
 import com.materialmail.core.database.dao.FolderDao
@@ -12,6 +13,7 @@ import com.materialmail.core.database.dao.MessageDao
 import com.materialmail.core.database.dao.SearchDao
 import com.materialmail.core.database.dao.ThreadDao
 import com.materialmail.core.database.entity.AccountEntity
+import com.materialmail.core.database.entity.ActionLogEntity
 import com.materialmail.core.database.entity.AttachmentEntity
 import com.materialmail.core.database.entity.DraftEntity
 import com.materialmail.core.database.entity.FolderEntity
@@ -23,6 +25,7 @@ import com.materialmail.core.database.entity.ThreadEntity
 @Database(
     entities = [
         AccountEntity::class,
+        ActionLogEntity::class,
         FolderEntity::class,
         ThreadEntity::class,
         MessageEntity::class,
@@ -31,12 +34,13 @@ import com.materialmail.core.database.entity.ThreadEntity
         DraftEntity::class,
         LabelEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
 abstract class MaterialMailDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
+    abstract fun actionLogDao(): ActionLogDao
     abstract fun folderDao(): FolderDao
     abstract fun threadDao(): ThreadDao
     abstract fun messageDao(): MessageDao

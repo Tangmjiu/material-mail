@@ -41,6 +41,11 @@ data class AgentAction(
     val description: String,
     /** 受影响的邮件 / 对象数量，确认卡片展示。 */
     val affectedCount: Int,
+    /**
+     * 是否永久删除。true 时 ConfirmationGate 强制确认，
+     * YOLO 也不可自动执行（需求 §45，硬编码非配置项）。
+     */
+    val permanent: Boolean = false,
 )
 
 /** 提供方注册自己拥有的能力集合，由 DI 容器聚合。 */

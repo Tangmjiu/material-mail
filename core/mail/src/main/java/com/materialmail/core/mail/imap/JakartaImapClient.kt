@@ -1,6 +1,7 @@
 package com.materialmail.core.mail.imap
 
 import com.materialmail.core.mail.utf7.ModifiedUtf7
+import com.materialmail.core.model.Encryption
 import com.materialmail.core.model.FolderRole
 import com.materialmail.core.model.MessageFlag
 import com.materialmail.core.model.Participant
@@ -118,42 +119,36 @@ class JakartaImapClient : ImapClient {
                 val messages = folder.getMessagesByUID(uids.toLongArray())
                     .filterNotNull()
                 if (messages.isEmpty()) return@withContext emptyList()
-                val profile = jakarta.mail.FetchProfile().apply {
-                    add(jakarta.mail.FetchProfile.Item.ENVELOPE)
-                    add(jakarta.mail.FetchProfile.Item.FLAGS)
-                    add(jakarta.mail.FetchProfile.Item.INTERNALDATE)
-                    add(jakarta.mail.FetchProfile.Item.SIZE)
-                    add(UIDFolder.FetchProfileItem.UID)
-                    add("Message-ID")
-                    add("In-Reply-To")
-                    add("References")
-                }
-                folder.fetch(messages.toTypedArray(), profile)
-                messages.map { message ->
-                    val uid = folder.getUID(message)
-                    RemoteEnvelope(
-                        uid = uid,
-                        messageIdHeader = message.getHeader("Message-ID")?.firstOrNull()
-                            ?.trim()?.removePrefix("<")?.removeSuffix(">"),
-                        inReplyTo = message.getHeader("In-Reply-To")?.firstOrNull()
-                            ?.trim()?.removePrefix("<")?.removeSuffix(">"),
-                        references = message.getHeader("References")
-                            ?.flatMap { REFERENCE_REGEX.findAll(it).map { m -> m.value } }
-                            ?.map { it.removePrefix("<").removeSuffix(">") }
-                            ?: emptyList(),
-                        from = message.from.toParticipants(),
-                        to = message.getRecipients(jakarta.mail.Message.RecipientType.TO).toParticipants(),
-                        cc = message.getRecipients(jakarta.mail.Message.RecipientType.CC).toParticipants(),
-                        subject = message.subject ?: "",
-                        sentAt = message.sentDate?.toInstant(),
-                        flags = message.flags.toModelFlags(),
-                        sizeBytes = message.size.takeIf { it >= 0 }?.toLong() ?: 0L,
-                    )
-                }
+                fetchEnvelopeBatch(folder, messages)
             } finally {
                 folder.close(false)
             }
         }
+
+    override suspend fun fetchNewEnvelopes(folderName: String, afterUid: Long): List<RemoteEnvelope> =
+        withContext(Dispatchers.IO) {
+            val folder = openFolder(folderName, Folder.READ_ONLY)
+            try {
+                val messages = folder.getMessagesByUID(afterUid + 1, UIDFolder.LASTUID)
+                    ?.filterNotNull() ?: return@withContext emptyList()
+                if (messages.isEmpty()) return@withContext emptyList()
+                fetchEnvelopeBatch(folder, messages)
+            } finally {
+                folder.close(false)
+            }
+        }
+
+    override suspend fun fetchAllUids(folderName: String): List<Long> = withContext(Dispatchers.IO) {
+        val folder = openFolder(folderName, Folder.READ_ONLY)
+        try {
+            folder.getMessagesByUID(1, UIDFolder.LASTUID)
+                ?.filterNotNull()
+                ?.map { folder.getUID(it) }
+                ?: emptyList()
+        } finally {
+            folder.close(false)
+        }
+    }
 
     override suspend fun fetchRawMessage(folderName: String, uid: Long): RawMessage =
         withContext(Dispatchers.IO) {
@@ -294,6 +289,44 @@ class JakartaImapClient : ImapClient {
     }
 
     // ── internal ─────────────────────────────────────────────
+
+    /** 批量拉取信封。调用方负责文件夹的开关与关闭。 */
+    private fun fetchEnvelopeBatch(
+        folder: IMAPFolder,
+        messages: List<jakarta.mail.Message>,
+    ): List<RemoteEnvelope> {
+        val profile = jakarta.mail.FetchProfile().apply {
+            add(jakarta.mail.FetchProfile.Item.ENVELOPE)
+            add(jakarta.mail.FetchProfile.Item.FLAGS)
+            add(jakarta.mail.FetchProfile.Item.INTERNALDATE)
+            add(jakarta.mail.FetchProfile.Item.SIZE)
+            add(UIDFolder.FetchProfileItem.UID)
+            add("Message-ID")
+            add("In-Reply-To")
+            add("References")
+        }
+        folder.fetch(messages.toTypedArray(), profile)
+        return messages.map { message ->
+            RemoteEnvelope(
+                uid = folder.getUID(message),
+                messageIdHeader = message.getHeader("Message-ID")?.firstOrNull()
+                    ?.trim()?.removePrefix("<")?.removeSuffix(">"),
+                inReplyTo = message.getHeader("In-Reply-To")?.firstOrNull()
+                    ?.trim()?.removePrefix("<")?.removeSuffix(">"),
+                references = message.getHeader("References")
+                    ?.flatMap { REFERENCE_REGEX.findAll(it).map { m -> m.value } }
+                    ?.map { it.removePrefix("<").removeSuffix(">") }
+                    ?: emptyList(),
+                from = message.from.toParticipants(),
+                to = message.getRecipients(jakarta.mail.Message.RecipientType.TO).toParticipants(),
+                cc = message.getRecipients(jakarta.mail.Message.RecipientType.CC).toParticipants(),
+                subject = message.subject ?: "",
+                sentAt = message.sentDate?.toInstant(),
+                flags = message.flags.toModelFlags(),
+                sizeBytes = message.size.takeIf { it >= 0 }?.toLong() ?: 0L,
+            )
+        }
+    }
 
     private fun disconnectInternal() {
         runCatching { store?.close() }

@@ -9,6 +9,12 @@ data class AccountEntity(
     val email: String,
     val displayName: String?,
     val protocol: String,
+    val imapHost: String,
+    val imapPort: Int,
+    val imapEncryption: String,
+    val smtpHost: String,
+    val smtpPort: Int,
+    val smtpEncryption: String,
     val syncState: String,
     val createdAtEpochMs: Long,
 )

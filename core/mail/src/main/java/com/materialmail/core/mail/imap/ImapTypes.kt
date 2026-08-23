@@ -1,23 +1,10 @@
 package com.materialmail.core.mail.imap
 
+import com.materialmail.core.model.Encryption
 import com.materialmail.core.model.FolderRole
 import com.materialmail.core.model.MessageFlag
 import com.materialmail.core.model.Participant
 import java.time.Instant
-
-enum class Encryption {
-    /** 993：SSL/TLS 直连，推荐。 */
-    SSL_TLS,
-
-    /** 143 + STARTTLS 升级，强制要求升级成功，否则断开。 */
-    STARTTLS,
-
-    /**
-     * 明文。安全模型 §11：连接前必须向用户显式警告，
-     * 因此构造时强制要求 [ServerConfig.allowCleartext] 确认。
-     */
-    NONE,
-}
 
 data class ServerConfig(
     val host: String,

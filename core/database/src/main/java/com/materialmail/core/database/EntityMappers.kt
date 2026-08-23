@@ -16,6 +16,7 @@ import com.materialmail.core.model.BodyRef
 import com.materialmail.core.model.ColorInt
 import com.materialmail.core.model.Draft
 import com.materialmail.core.model.DraftId
+import com.materialmail.core.model.Encryption
 import com.materialmail.core.model.Folder
 import com.materialmail.core.model.FolderId
 import com.materialmail.core.model.FolderRole
@@ -24,6 +25,7 @@ import com.materialmail.core.model.LabelId
 import com.materialmail.core.model.Message
 import com.materialmail.core.model.MessageId
 import com.materialmail.core.model.Protocol
+import com.materialmail.core.model.ServerEndpoint
 import com.materialmail.core.model.SyncState
 import com.materialmail.core.model.Thread
 import com.materialmail.core.model.ThreadId
@@ -39,6 +41,12 @@ fun Account.toEntity(): AccountEntity = AccountEntity(
     email = email,
     displayName = displayName,
     protocol = protocol.name,
+    imapHost = imap.host,
+    imapPort = imap.port,
+    imapEncryption = imap.encryption.name,
+    smtpHost = smtp.host,
+    smtpPort = smtp.port,
+    smtpEncryption = smtp.encryption.name,
     syncState = syncState.name,
     createdAtEpochMs = createdAt.toEpochMs(),
 )
@@ -48,6 +56,8 @@ fun AccountEntity.toModel(): Account = Account(
     email = email,
     displayName = displayName,
     protocol = Protocol.valueOf(protocol),
+    imap = ServerEndpoint(imapHost, imapPort, Encryption.valueOf(imapEncryption)),
+    smtp = ServerEndpoint(smtpHost, smtpPort, Encryption.valueOf(smtpEncryption)),
     syncState = SyncState.valueOf(syncState),
     createdAt = createdAtEpochMs.toInstant(),
 )
@@ -59,6 +69,7 @@ fun Folder.toEntity(): FolderEntity = FolderEntity(
     displayName = displayName,
     role = role.name,
     unreadCount = unreadCount,
+    uidValidity = uidValidity,
 )
 
 fun FolderEntity.toModel(): Folder = Folder(
@@ -68,6 +79,7 @@ fun FolderEntity.toModel(): Folder = Folder(
     displayName = displayName,
     role = FolderRole.valueOf(role),
     unreadCount = unreadCount,
+    uidValidity = uidValidity,
 )
 
 fun Thread.toEntity(): ThreadEntity = ThreadEntity(

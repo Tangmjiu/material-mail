@@ -7,8 +7,8 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
-/** Room 类型转换。复杂字段统一走 JSON / CSV，避免嵌套表膨胀。 */
-internal object Converters {
+/** Room 类型转换。复杂字段统一走 JSON / CSV，避免嵌套表膨胀。同步层也复用此编码。 */
+object Converters {
     private val json = Json { ignoreUnknownKeys = true }
     private val participantListSerializer = ListSerializer(Participant.serializer())
     private val stringListSerializer = ListSerializer(String.serializer())

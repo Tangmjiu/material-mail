@@ -28,4 +28,8 @@ interface ThreadDao {
 
     @Query("DELETE FROM threads WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    /** threading 重建后清理已消失的线程。 */
+    @Query("DELETE FROM threads WHERE accountId = :accountId AND id NOT IN (:keepIds)")
+    suspend fun deleteNotIn(accountId: String, keepIds: List<String>)
 }

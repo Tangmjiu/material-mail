@@ -20,6 +20,9 @@ interface FolderDao {
     @Query("SELECT * FROM folders WHERE id = :id")
     suspend fun getById(id: String): FolderEntity?
 
+    @Query("SELECT * FROM folders WHERE accountId = :accountId")
+    suspend fun getByAccount(accountId: String): List<FolderEntity>
+
     @Query("UPDATE folders SET unreadCount = :unreadCount WHERE id = :id")
     suspend fun updateUnreadCount(id: String, unreadCount: Int)
 

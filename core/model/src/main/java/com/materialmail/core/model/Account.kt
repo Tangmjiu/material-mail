@@ -27,6 +27,8 @@ data class Account(
     val email: String,
     val displayName: String?,
     val protocol: Protocol,
+    val imap: ServerEndpoint,
+    val smtp: ServerEndpoint,
     val syncState: SyncState,
     val createdAt: Instant,
 )

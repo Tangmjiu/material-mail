@@ -17,6 +17,9 @@ import androidx.room.PrimaryKey
             parentColumns = ["id"],
             childColumns = ["threadId"],
             onDelete = ForeignKey.CASCADE,
+            // 同步事务：消息先入表（threadId 临时值），ThreadBuilder 同事务重建线程，
+            // 提交时才校验外键。离开同步事务后不允许写入无效 threadId。
+            deferred = true,
         ),
         ForeignKey(
             entity = FolderEntity::class,

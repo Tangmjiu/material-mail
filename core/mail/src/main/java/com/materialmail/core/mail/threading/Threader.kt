@@ -9,6 +9,8 @@ data class ThreadingInput(
     val references: List<String>,
     val subject: String,
     val fromAddress: String,
+    val fromName: String? = null,
+    val isRead: Boolean = true,
     val sentAt: Instant,
 )
 

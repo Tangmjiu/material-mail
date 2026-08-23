@@ -24,10 +24,15 @@ interface ImapClient {
     suspend fun listFolders(): List<RemoteFolder>
 
     /**
-     * 拉取指定 UID 区间的信封（不含正文）。
-     * @param uidRange 例：1L..100L；空列表返回空。
+     * 拉取指定 UID 集合的信封（不含正文）。空列表返回空。
      */
     suspend fun fetchEnvelopes(folderName: String, uids: List<Long>): List<RemoteEnvelope>
+
+    /** 增量同步：拉取 UID > [afterUid] 的全部信封。 */
+    suspend fun fetchNewEnvelopes(folderName: String, afterUid: Long): List<RemoteEnvelope>
+
+    /** 文件夹内当前全部 UID（删除对账用，FETCH UID 很轻）。 */
+    suspend fun fetchAllUids(folderName: String): List<Long>
 
     /** 拉取整封原始 MIME 报文。 */
     suspend fun fetchRawMessage(folderName: String, uid: Long): RawMessage

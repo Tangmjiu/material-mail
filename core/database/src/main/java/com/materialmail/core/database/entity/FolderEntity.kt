@@ -24,4 +24,5 @@ data class FolderEntity(
     val displayName: String,
     val role: String,
     val unreadCount: Int,
+    val uidValidity: Long,
 )

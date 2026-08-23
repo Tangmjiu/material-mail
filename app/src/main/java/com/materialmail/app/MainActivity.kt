@@ -20,6 +20,9 @@ import com.materialmail.feature.inbox.ThreadDetailScreen
 import com.materialmail.feature.inbox.ThreadDetailViewModel
 import com.materialmail.core.model.ThreadId
 import com.materialmail.core.sync.work.SyncScheduler
+import com.materialmail.feature.account.AccountRoutes
+import com.materialmail.feature.account.AddAccountScreen
+import com.materialmail.feature.account.AddAccountViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +63,24 @@ fun MaterialMailNavHost(
                     animatedVisibilityScope = this,
                     onOpenThread = { threadId ->
                         navController.navigate(InboxRoutes.threadDetail(threadId))
+                    },
+                    onAddAccount = { navController.navigate(AccountRoutes.ADD_ACCOUNT) },
+                )
+            }
+            composable(AccountRoutes.ADD_ACCOUNT) {
+                val viewModel: AddAccountViewModel = viewModel(
+                    factory = AddAccountViewModel.factory(
+                        database = container.database,
+                        credentialStore = container.credentialStore,
+                    ),
+                )
+                AddAccountScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onSaved = {
+                        // 新账户立即首次同步，然后回收件箱
+                        SyncScheduler.syncNow(appContext)
+                        navController.popBackStack()
                     },
                 )
             }

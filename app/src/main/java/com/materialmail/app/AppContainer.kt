@@ -1,9 +1,12 @@
 package com.materialmail.app
 
 import android.content.Context
+import com.materialmail.core.crypto.CredentialStore
+import com.materialmail.core.crypto.StoredCredential
 import com.materialmail.core.database.BodyStore
 import com.materialmail.core.database.DatabaseFactory
 import com.materialmail.core.database.MaterialMailDatabase
+import com.materialmail.core.mail.imap.AuthCredentials
 import com.materialmail.core.sync.AccountCredentialProvider
 import com.materialmail.core.sync.BodyLoader
 import com.materialmail.core.sync.MessageActionPerformer
@@ -17,12 +20,19 @@ class AppContainer(context: Context) {
 
     val database: MaterialMailDatabase = DatabaseFactory.create(context)
     val bodyStore: BodyStore = BodyStore(context)
+    val credentialStore: CredentialStore = CredentialStore(context)
 
-    /**
-     * 凭据供给桩：账户/认证层（Keystore + OAuth 引导）在后续阶段实现。
-     * 当前返回 null → 同步结果为 NoCredentials，跳过而非报错。
-     */
-    private val credentialProvider = AccountCredentialProvider { null }
+    /** 真实凭据供给：Keystore 加密 + DataStore 持久化（core:crypto）。 */
+    private val credentialProvider = AccountCredentialProvider { account ->
+        credentialStore.load(account.id.value)?.let { stored ->
+            when (stored.type) {
+                StoredCredential.Type.PASSWORD ->
+                    AuthCredentials.Password(account.email, stored.secret)
+                StoredCredential.Type.OAUTH2_TOKEN ->
+                    AuthCredentials.OAuth2(account.email, stored.secret)
+            }
+        }
+    }
 
     val syncEngine: SyncEngine = SyncEngine(database, credentialProvider)
     val bodyLoader: BodyLoader = BodyLoader(database, bodyStore, credentialProvider)

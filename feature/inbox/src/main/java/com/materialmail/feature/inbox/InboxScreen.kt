@@ -70,6 +70,7 @@ fun InboxScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onOpenThread: (threadId: String) -> Unit,
+    onAddAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -129,6 +130,7 @@ fun InboxScreen(
             }
 
             InboxUiState.NoAccount -> NoAccountState(
+                onAddAccount = onAddAccount,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
             )
 
@@ -223,7 +225,7 @@ private fun ThreadList(
 }
 
 @Composable
-private fun NoAccountState(modifier: Modifier = Modifier) {
+private fun NoAccountState(onAddAccount: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(MailTheme.spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -243,11 +245,19 @@ private fun NoAccountState(modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.height(MailTheme.spacing.sm))
         Text(
-            "添加账户后即可离线收件。账户登录与 OAuth 引导将在下一阶段提供。",
+            "添加账户后即可离线收件。支持 Gmail / QQ / 163 / Outlook 预设与任意 IMAP 服务器。",
             style = MailTypeScale.preview,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.height(MailTheme.spacing.xl))
+        androidx.compose.material3.Button(
+            onClick = onAddAccount,
+            modifier = Modifier.height(52.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+        ) {
+            Text("添加账户", style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
 

@@ -33,6 +33,7 @@ include(":core:mail")
 include(":core:sync")
 include(":core:search")
 include(":core:capability")
+include(":core:crypto")
 
 // ── Design System ─────────────────────────
 include(":designsystem")
@@ -41,6 +42,7 @@ include(":designsystem")
 include(":feature:inbox")
 include(":feature:composer")
 include(":feature:settings")
+include(":feature:account")
 
 // ── Agent / Region（独立可摘除模块）─────────
 include(":agent")

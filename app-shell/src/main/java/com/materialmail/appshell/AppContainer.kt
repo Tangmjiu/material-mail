@@ -1,4 +1,4 @@
-package com.materialmail.app
+package com.materialmail.appshell
 
 import android.content.Context
 import com.materialmail.core.crypto.CredentialStore

@@ -1,4 +1,4 @@
-package com.materialmail.app.widget
+package com.materialmail.appshell.widget
 
 import android.content.Context
 import androidx.glance.GlanceId
@@ -16,7 +16,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.dp
-import com.materialmail.app.MaterialMailApp
+import com.materialmail.appshell.AppContainerProvider
 import com.materialmail.core.database.toModel
 import kotlinx.coroutines.flow.first
 
@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.first
 class InboxWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val container = (context.applicationContext as? MaterialMailApp)?.container
+        val container = (context.applicationContext as? AppContainerProvider)?.container
         val threads = runCatching {
             val account = container?.database?.accountDao()?.observeAll()?.first()
                 ?.firstOrNull() ?: return@runCatching emptyList()

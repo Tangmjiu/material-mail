@@ -25,6 +25,7 @@ rootProject.name = "material-mail"
 
 // ── App Shell ─────────────────────────────
 include(":app")
+include(":app-shell")
 
 // ── Core（纯邮箱领域，永远不许依赖 Pro/Agent/Region/UI）──
 include(":core:model")
@@ -53,7 +54,13 @@ include(":region")
 // 物理上不可能把 Pro 代码编进 Community 产物（Open Core 铁律）。
 val proEnabled = providers.gradleProperty("materialmail.includePro").orNull?.toBoolean() ?: true
 if (proEnabled && java.io.File(rootDir, "pro").isDirectory) {
-    // 未来 Pro 模块在此注册，例如：
-    // include(":pro:licensing")
-    // include(":pro:connectors:feishu")
+    // Pro 模块（闭源，仅私有完整产品仓库）：
+    include(":pro:licensing")
+    include(":pro:automation")
+    include(":pro:advanced-search")
+    include(":pro:productivity")
+    include(":pro:connectors")
+    include(":pro:personalization")
+    include(":pro:stats")
+    include(":pro:app")
 }

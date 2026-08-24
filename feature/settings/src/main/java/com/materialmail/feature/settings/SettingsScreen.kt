@@ -34,6 +34,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.materialmail.designsystem.theme.MailTheme
 import com.materialmail.designsystem.theme.MailTypeScale
 
+/** Pro 功能入口描述（由 pro:app 组装层注入）。 */
+data class ProEntry(
+    val title: String,
+    val subtitle: String,
+    val locked: Boolean,
+    val onClick: () -> Unit,
+)
+
 /** 设置首页。分区用色阶与留白，不用卡片堆。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +52,8 @@ fun SettingsScreen(
     onOpenAgentPermissions: () -> Unit,
     onOpenRegion: () -> Unit,
     onOpenYolo: () -> Unit,
+    /** Pro 功能入口槽（pro:app 壳注入；Community 版为空，物理上无 Pro 痕迹）。 */
+    proEntries: List<ProEntry> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -138,6 +148,18 @@ fun SettingsScreen(
                 )
             }
             item { DividerItem() }
+
+            if (proEntries.isNotEmpty()) {
+                item { DividerItem() }
+                item { SectionLabel("Pro") }
+                items(items = proEntries, key = { it.title }) { entry ->
+                    SettingsEntry(
+                        title = entry.title + if (entry.locked) " · Pro" else "",
+                        subtitle = entry.subtitle,
+                        onClick = entry.onClick,
+                    )
+                }
+            }
 
             item { SectionLabel("关于") }
             item {

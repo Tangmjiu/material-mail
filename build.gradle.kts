@@ -29,7 +29,11 @@ tasks.register("checkModuleBoundaries") {
                 dep.startsWith(":core:") || dep == ":designsystem" || dep == ":region" || dep == ":agent"
             // Community 壳物理上不得依赖 Pro
             projectPath == ":app" -> !dep.startsWith(":pro:")
-            // Pro 只依赖 Core/设计系统/能力层/Pro 自身，不反向依赖 Community feature
+            projectPath == ":app-shell" -> !dep.startsWith(":pro:")
+            // Pro 壳（完整产品组装层）：不受限，负责接线 Community + Pro
+            projectPath == ":pro:app" -> true
+            // Pro 业务模块：只依赖 Core/设计系统/能力层/Pro 自身，不反向依赖 Community feature
+            // （Community 页面复用经由 :pro:app 壳组装，业务模块保持解耦）
             projectPath.startsWith(":pro:") ->
                 dep.startsWith(":core:") || dep == ":designsystem" ||
                     dep == ":agent" || dep == ":region" || dep.startsWith(":pro:")

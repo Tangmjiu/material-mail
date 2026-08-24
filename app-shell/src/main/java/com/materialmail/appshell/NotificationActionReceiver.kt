@@ -1,4 +1,4 @@
-package com.materialmail.app
+package com.materialmail.appshell
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
@@ -22,7 +22,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
             YoloStatusNotifier.ACTION_BASE + YoloStatusNotifier.ACTION_STOP_YOLO
         val threadId = intent.getStringExtra(NewMailNotifier.EXTRA_THREAD_ID)
         if (!isYoloStop && threadId == null) return
-        val container = (context.applicationContext as? MaterialMailApp)?.container ?: return
+        val container = (context.applicationContext as? AppContainerProvider)?.container ?: return
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {

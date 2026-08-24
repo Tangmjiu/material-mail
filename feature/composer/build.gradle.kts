@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":core:sync"))
     implementation(project(":core:mail"))
 
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.compose.material.icons.extended)

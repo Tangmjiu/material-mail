@@ -9,6 +9,7 @@ import com.materialmail.core.database.Converters
 import com.materialmail.core.database.MaterialMailDatabase
 import com.materialmail.core.database.toEntity
 import com.materialmail.core.database.toModel
+import com.materialmail.core.mail.smtp.OutgoingAttachment
 import com.materialmail.core.mail.smtp.OutgoingMessage
 import com.materialmail.core.model.AccountId
 import com.materialmail.core.model.BodyFormat
@@ -46,6 +47,7 @@ data class ComposerUiState(
     val error: String? = null,
     /** 表单尚未初始化完成（预填进行中）。 */
     val initializing: Boolean = true,
+    val attachments: List<OutgoingAttachment> = emptyList(),
 )
 
 sealed interface ComposerEvent {
@@ -173,6 +175,28 @@ class ComposerViewModel(
     fun onCcChanged(v: String) = _uiState.update { it.copy(cc = v) }
     fun onBccChanged(v: String) = _uiState.update { it.copy(bcc = v) }
     fun onToggleCcBcc() = _uiState.update { it.copy(showCcBcc = !it.showCcBcc) }
+
+    /** 添加附件（内容读入内存；单文件 ≤10MB、合计 ≤25MB，超出明确报错）。 */
+    fun addAttachment(fileName: String, mimeType: String, data: ByteArray) {
+        val current = _uiState.value.attachments
+        if (data.size > MAX_ATTACHMENT_BYTES) {
+            _uiState.update { it.copy(error = "$fileName 超过 10MB 上限") }
+            return
+        }
+        if (current.sumOf { it.data.size } + data.size > MAX_TOTAL_BYTES) {
+            _uiState.update { it.copy(error = "附件总大小超过 25MB 上限") }
+            return
+        }
+        _uiState.update {
+            it.copy(attachments = current + OutgoingAttachment(fileName, mimeType, data))
+        }
+    }
+
+    fun removeAttachment(index: Int) {
+        _uiState.update { state ->
+            state.copy(attachments = state.attachments.filterIndexed { i, _ -> i != index })
+        }
+    }
     fun onSubjectChanged(v: String) = _uiState.update { it.copy(subject = v) }
     fun onBodyChanged(v: String) = _uiState.update { it.copy(body = v) }
 
@@ -249,6 +273,7 @@ class ComposerViewModel(
                     bodyFormat = BodyFormat.PLAIN_TEXT,
                     inReplyTo = inReplyToHeader,
                     references = referenceHeaders,
+                    attachments = state.attachments,
                 ),
                 draftIdToDelete = currentDraftId,
             )
@@ -274,6 +299,8 @@ class ComposerViewModel(
 
     companion object {
         private val ADDRESS_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+        private const val MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+        private const val MAX_TOTAL_BYTES = 25 * 1024 * 1024
 
         fun factory(
             draftId: DraftId?,

@@ -1,5 +1,8 @@
 package com.materialmail.feature.composer
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +15,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -59,6 +64,25 @@ fun ComposerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // SAF 选附件（可多选；不持久化授权——草稿不保存附件，诚实告知）
+    val attachmentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        uris?.forEach { uri ->
+            runCatching {
+                val name = context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                    val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (c.moveToFirst() && idx >= 0) c.getString(idx) else null
+                } ?: "attachment"
+                val mime = context.contentResolver.getType(uri)
+                    ?: "application/octet-stream"
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes != null) viewModel.addAttachment(name, mime, bytes)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -92,6 +116,16 @@ fun ComposerScreen(
                         )
                     },
                     actions = {
+                        IconButton(
+                            onClick = { attachmentPicker.launch(arrayOf("*/*")) },
+                            enabled = !uiState.sending,
+                        ) {
+                            Icon(
+                                Icons.Outlined.AttachFile,
+                                contentDescription = "添加附件（草稿不保存附件）",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(
                             uiState.accountEmail,
                             style = MailTypeScale.meta,
@@ -169,6 +203,37 @@ fun ComposerScreen(
                 keyboardType = KeyboardType.Text,
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+
+            if (uiState.attachments.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = MailTheme.spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(MailTheme.spacing.sm),
+                ) {
+                    uiState.attachments.forEachIndexed { index, attachment ->
+                        InputChip(
+                            selected = false,
+                            onClick = { viewModel.removeAttachment(index) },
+                            label = {
+                                Text(
+                                    attachment.fileName,
+                                    style = MailTypeScale.meta,
+                                    maxLines = 1,
+                                )
+                            },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Outlined.Close,
+                                    contentDescription = "移除附件",
+                                    modifier = Modifier.height(16.dp),
+                                )
+                            },
+                        )
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+            }
 
             TextField(
                 value = uiState.body,

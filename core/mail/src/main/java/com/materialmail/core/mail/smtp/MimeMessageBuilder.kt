@@ -22,7 +22,20 @@ data class OutgoingMessage(
     /** 回复时原邮件的 RFC Message-ID。 */
     val inReplyTo: String? = null,
     val references: List<String> = emptyList(),
+    val attachments: List<OutgoingAttachment> = emptyList(),
 )
+
+/** 待发附件（内容已读入内存；大小上限由 Composer 控制）。 */
+data class OutgoingAttachment(
+    val fileName: String,
+    val mimeType: String,
+    val data: ByteArray,
+) {
+    override fun equals(other: Any?): Boolean =
+        other is OutgoingAttachment && other.fileName == fileName && other.data.contentEquals(data)
+
+    override fun hashCode(): Int = 31 * fileName.hashCode() + data.contentHashCode()
+}
 
 /**
  * 构造符合 RFC 5322 / MIME 的原始报文：
@@ -72,9 +85,37 @@ object MimeMessageBuilder {
             )
         }
 
-        when (message.bodyFormat) {
-            BodyFormat.PLAIN_TEXT -> mime.setText(message.body, "UTF-8")
-            BodyFormat.HTML -> mime.setContent(message.body, "text/html; charset=UTF-8")
+        if (message.attachments.isEmpty()) {
+            when (message.bodyFormat) {
+                BodyFormat.PLAIN_TEXT -> mime.setText(message.body, "UTF-8")
+                BodyFormat.HTML -> mime.setContent(message.body, "text/html; charset=UTF-8")
+            }
+        } else {
+            // multipart/mixed：正文 + 附件
+            val multipart = jakarta.mail.internet.MimeMultipart("mixed")
+            val bodyPart = jakarta.mail.internet.MimeBodyPart()
+            when (message.bodyFormat) {
+                BodyFormat.PLAIN_TEXT -> bodyPart.setText(message.body, "UTF-8")
+                BodyFormat.HTML -> bodyPart.setContent(message.body, "text/html; charset=UTF-8")
+            }
+            multipart.addBodyPart(bodyPart)
+            for (attachment in message.attachments) {
+                val part = jakarta.mail.internet.MimeBodyPart()
+                part.dataHandler = jakarta.activation.DataHandler(
+                    object : jakarta.activation.DataSource {
+                        override fun getInputStream() = attachment.data.inputStream()
+                        override fun getOutputStream() = throw UnsupportedOperationException()
+                        override fun getContentType() = attachment.mimeType
+                        override fun getName() = attachment.fileName
+                    },
+                )
+                part.fileName = jakarta.mail.internet.MimeUtility.encodeText(
+                    attachment.fileName, "UTF-8", null,
+                )
+                part.disposition = jakarta.mail.Part.ATTACHMENT
+                multipart.addBodyPart(part)
+            }
+            mime.setContent(multipart)
         }
 
         val out = ByteArrayOutputStream()

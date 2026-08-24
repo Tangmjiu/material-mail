@@ -304,6 +304,7 @@ class JakartaImapClient : ImapClient {
             add("Message-ID")
             add("In-Reply-To")
             add("References")
+            add("List-Unsubscribe")
         }
         folder.fetch(messages.toTypedArray(), profile)
         return messages.map { message ->
@@ -324,6 +325,7 @@ class JakartaImapClient : ImapClient {
                 sentAt = message.sentDate?.toInstant(),
                 flags = message.flags.toModelFlags(),
                 sizeBytes = message.size.takeIf { it >= 0 }?.toLong() ?: 0L,
+                listUnsubscribe = message.getHeader("List-Unsubscribe")?.firstOrNull()?.trim(),
             )
         }
     }

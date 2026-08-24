@@ -1,5 +1,6 @@
 package com.materialmail.designsystem.component
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -7,6 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +30,8 @@ import com.materialmail.designsystem.theme.MailTypeScale
  */
 @Composable
 fun MailListItem(
+    /** null = 非选择模式；true/false = 多选模式下的选中态（spine 位换勾选圈）。 */
+    selection: Boolean? = null,
     sender: String,
     subject: String,
     preview: String,
@@ -41,7 +48,32 @@ fun MailListItem(
                 stateDescription = if (unread) "未读" else "已读"
             },
     ) {
-        UnreadSpine(unread = unread, modifier = Modifier.align(Alignment.CenterVertically))
+        if (selection == null) {
+            UnreadSpine(unread = unread, modifier = Modifier.align(Alignment.CenterVertically))
+        } else {
+            // 多选模式：勾选圈按 Expressive spring 缩放进出
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .padding(start = 16.dp)
+                    .width(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (selection) {
+                        Icons.Filled.CheckCircle
+                    } else {
+                        Icons.Outlined.Circle
+                    },
+                    contentDescription = if (selection) "已选中" else "未选中",
+                    tint = if (selection) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
+                )
+            }
+        }
         Column(
             modifier = Modifier
                 .weight(1f)

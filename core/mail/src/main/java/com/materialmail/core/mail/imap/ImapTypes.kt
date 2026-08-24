@@ -61,6 +61,8 @@ data class RemoteEnvelope(
     val sentAt: Instant?,
     val flags: Set<MessageFlag>,
     val sizeBytes: Long,
+    /** List-Unsubscribe 头（RFC 2369）：订阅邮件的一键退订入口。 */
+    val listUnsubscribe: String? = null,
 )
 
 /** 整封原始 MIME 报文。 */

@@ -48,6 +48,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.MediumFlexibleTopAppBar
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -118,8 +123,9 @@ fun ThreadDetailScreen(
         modifier
     }
 
+    val detailScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-            modifier = sharedModifier,
+            modifier = sharedModifier.nestedScroll(detailScrollBehavior.nestedScrollConnection),
             snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
             bottomBar = {
                 val latestMessageId = uiState.messages.lastOrNull()?.messageId
@@ -165,7 +171,7 @@ fun ThreadDetailScreen(
                 }
             },
             topBar = {
-                TopAppBar(
+                MediumFlexibleTopAppBar(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
@@ -185,6 +191,7 @@ fun ThreadDetailScreen(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                     ),
+                    scrollBehavior = detailScrollBehavior,
                 )
             },
         ) { innerPadding ->
@@ -279,8 +286,14 @@ private fun MessageBlock(
         }
         if (message.attachments.isNotEmpty()) {
             Spacer(Modifier.height(MailTheme.spacing.md))
-            Row(horizontalArrangement = Arrangement.spacedBy(MailTheme.spacing.sm)) {
-                message.attachments.forEach { attachment ->
+            // MD3E 附件旋转木马：横向滑动浏览，项宽固定
+            HorizontalUncontainedCarousel(
+                state = rememberCarouselState(itemCount = { message.attachments.size }),
+                itemWidth = 280.dp,
+                itemSpacing = MailTheme.spacing.sm,
+            ) { index ->
+                val attachment = message.attachments[index]
+                run {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                         shape = MaterialTheme.shapes.small,

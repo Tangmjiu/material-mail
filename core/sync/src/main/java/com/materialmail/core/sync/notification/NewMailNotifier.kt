@@ -34,6 +34,8 @@ class NewMailNotifier(private val context: Context) {
     }
 
     fun notifyNewMail(newMails: List<NewMailInfo>) {
+        // VIP/免打扰策略（Pro 注入；Community 恒放行）
+        val newMails = newMails.filter(NotificationPolicyHook.checker)
         if (newMails.isEmpty()) return
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=

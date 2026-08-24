@@ -103,6 +103,7 @@ class FolderSyncer(private val database: MaterialMailDatabase) {
             htmlPath = null,
             hasAttachments = false, // 信封阶段未知，正文解析后修正
             flagsCsv = com.materialmail.core.database.Converters.flagsToCsv(flags),
+            listUnsubscribe = listUnsubscribe,
         )
     }
 }

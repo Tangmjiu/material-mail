@@ -63,6 +63,7 @@ class SyncEngine(
                                 .participantsFromJson(entity.fromJson)
                                 .firstOrNull()?.displayName ?: "未知发件人",
                             subject = entity.subject,
+                            fromAddress = entity.fromAddress,
                         )
                     }
                 }

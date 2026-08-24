@@ -5,6 +5,8 @@ data class NewMailInfo(
     val threadId: String,
     val senderName: String,
     val subject: String,
+    /** 发件人地址（VIP/免打扰策略匹配用）。 */
+    val fromAddress: String = "",
 )
 
 /** 单次账户同步的结果。 */

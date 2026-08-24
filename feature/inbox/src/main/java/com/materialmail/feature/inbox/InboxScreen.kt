@@ -11,7 +11,9 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,11 +29,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.MarkEmailRead
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
@@ -112,6 +117,10 @@ fun InboxScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val ptrState = rememberPullToRefreshState()
+    val selectedIds by viewModel.selectedThreadIds.collectAsStateWithLifecycle()
+    androidx.activity.compose.BackHandler(enabled = selectedIds.isNotEmpty()) {
+        viewModel.clearSelection()
+    }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -129,10 +138,16 @@ fun InboxScreen(
             val message = when (event) {
                 is InboxEvent.Archived -> "已归档：" + event.threadSubject
                 is InboxEvent.Deleted -> "已移入垃圾箱：" + event.threadSubject
+                is InboxEvent.BatchArchived -> "已归档 " + event.count + " 个会话"
+                is InboxEvent.BatchDeleted -> "已删除 " + event.count + " 个会话"
+                is InboxEvent.BatchMarkedRead -> "已将 " + event.count + " 个会话标为已读"
             }
+            val undoable = event is InboxEvent.Archived || event is InboxEvent.Deleted
             val result = snackbarHostState.showSnackbar(
-                message = message, actionLabel = "撤销", withDismissAction = true)
-            if (result == SnackbarResult.ActionPerformed) viewModel.undoMove()
+                message = message,
+                actionLabel = if (undoable) "撤销" else null,
+                withDismissAction = true)
+            if (undoable && result == SnackbarResult.ActionPerformed) viewModel.undoMove()
         }
     }
 
@@ -193,6 +208,35 @@ fun InboxScreen(
                 }
             },
             topBar = {
+                if (selectedIds.isNotEmpty()) {
+                    // MD3E 情境顶栏：多选时替换普通顶栏（容器色变换 + 批量动作）
+                    TopAppBar(
+                        navigationIcon = {
+                            IconButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(Icons.Outlined.Close, contentDescription = "退出多选")
+                            }
+                        },
+                        title = {
+                            Text(
+                                "已选 " + selectedIds.size + " 项",
+                                style = MaterialTheme.typography.titleLarge)
+                        },
+                        actions = {
+                            IconButton(onClick = { viewModel.markSelectedRead() }) {
+                                Icon(
+                                    Icons.Outlined.MarkEmailRead,
+                                    contentDescription = "标为已读")
+                            }
+                            IconButton(onClick = { viewModel.archiveSelected() }) {
+                                Icon(Icons.Outlined.Archive, contentDescription = "批量归档")
+                            }
+                            IconButton(onClick = { viewModel.deleteSelected() }) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "批量删除")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh))
+                } else {
                 TopAppBar(
                     navigationIcon = {
                         if (uiState is InboxUiState.Ready) {
@@ -226,6 +270,7 @@ fun InboxScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface))
+                }
             }) { innerPadding ->
             when (val state = uiState) {
                 InboxUiState.Loading -> Box(
@@ -262,6 +307,7 @@ fun InboxScreen(
                                 ThreadList(
                                     threads = state.threads,
                                     listState = listState,
+                                    selectedIds = selectedIds,
                                     viewModel = viewModel,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
@@ -371,11 +417,12 @@ private fun DrawerContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ThreadList(
     threads: List<InboxThreadUi>,
     listState: LazyListState,
+    selectedIds: Set<String>,
     viewModel: InboxViewModel,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
@@ -394,10 +441,24 @@ private fun ThreadList(
                     }
                     false
                 })
+            val rowSelected = thread.threadId in selectedIds
+            val selecting = selectedIds.isNotEmpty()
+            val rowBg by animateColorAsState(
+                targetValue = if (rowSelected) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                animationSpec = MailTheme.motionScheme.defaultEffectsSpec(),
+                label = "rowSelect",
+            )
             SwipeToDismissBox(
                 // 行删除/归档后，邻近行按 spring 物理补位（Expressive 默认 spec）
                 modifier = Modifier.animateItem(),
                 state = dismissState,
+                // 多选模式下禁用滑动操作，避免手势冲突
+                enableDismissFromStartToEnd = !selecting,
+                enableDismissFromEndToStart = !selecting,
                 backgroundContent = {
                     val deleting =
                         dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
@@ -423,7 +484,7 @@ private fun ThreadList(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(rowBg)
                         .then(
                             if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                                 with(sharedTransitionScope) {
@@ -435,8 +496,18 @@ private fun ThreadList(
                             } else {
                                 Modifier
                             })
-                        .clickable { onOpenThread(thread.threadId) }) {
+                        .combinedClickable(
+                            onClick = {
+                                if (selecting) {
+                                    viewModel.toggleSelection(thread.threadId)
+                                } else {
+                                    onOpenThread(thread.threadId)
+                                }
+                            },
+                            onLongClick = { viewModel.toggleSelection(thread.threadId) },
+                        )) {
                     MailListItem(
+                        selection = if (selecting) rowSelected else null,
                         sender = thread.senderLine,
                         subject = thread.subject,
                         preview = thread.snippet,

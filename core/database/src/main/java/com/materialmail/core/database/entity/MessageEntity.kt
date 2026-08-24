@@ -59,4 +59,6 @@ data class MessageEntity(
     val hasAttachments: Boolean,
     /** MessageFlag 名的 CSV。 */
     val flagsCsv: String,
+    /** List-Unsubscribe 头原文（订阅管理/一键退订）。 */
+    val listUnsubscribe: String? = null,
 )

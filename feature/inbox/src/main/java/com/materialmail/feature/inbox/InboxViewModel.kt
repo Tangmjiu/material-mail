@@ -20,6 +20,8 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -82,6 +84,11 @@ sealed interface InboxUiState {
 sealed interface InboxEvent {
     data class Archived(val threadSubject: String) : InboxEvent
     data class Deleted(val threadSubject: String) : InboxEvent
+
+    /** 批量操作完成（批量场景不做单条撤销，提示数量）。 */
+    data class BatchArchived(val count: Int) : InboxEvent
+    data class BatchDeleted(val count: Int) : InboxEvent
+    data class BatchMarkedRead(val count: Int) : InboxEvent
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -100,6 +107,47 @@ class InboxViewModel(
     private val selectedAccountId = MutableStateFlow<String?>(null)
 
     val events = MutableSharedFlow<InboxEvent>(extraBufferCapacity = 1)
+
+    // ── 批量选择（MD3E 情境顶栏模式）─────────────────────────
+    private val _selectedThreadIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedThreadIds: StateFlow<Set<String>> = _selectedThreadIds.asStateFlow()
+
+    fun toggleSelection(threadId: String) {
+        _selectedThreadIds.update {
+            if (threadId in it) it - threadId else it + threadId
+        }
+    }
+
+    fun clearSelection() { _selectedThreadIds.value = emptySet() }
+
+    fun archiveSelected() = batchOp(
+        op = { actionPerformer.archiveThread(ThreadId(it)) },
+        event = { InboxEvent.BatchArchived(it) },
+    )
+
+    fun deleteSelected() = batchOp(
+        op = { actionPerformer.deleteThread(ThreadId(it)) },
+        event = { InboxEvent.BatchDeleted(it) },
+    )
+
+    fun markSelectedRead() = batchOp(
+        op = { actionPerformer.markThreadRead(ThreadId(it)); Unit },
+        event = { InboxEvent.BatchMarkedRead(it) },
+    )
+
+    private fun batchOp(
+        op: suspend (String) -> Any?,
+        event: (Int) -> InboxEvent,
+    ) {
+        val ids = _selectedThreadIds.value.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            var done = 0
+            ids.forEach { id -> runCatching { op(id) }.onSuccess { done++ } }
+            _selectedThreadIds.value = emptySet()
+            events.emit(event(done))
+        }
+    }
 
     val uiState: StateFlow<InboxUiState> = database.accountDao().observeAll()
         .flatMapLatest { accounts ->

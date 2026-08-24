@@ -17,6 +17,10 @@ interface AttachmentDao {
     @Query("SELECT * FROM attachments WHERE messageId = :messageId")
     fun observeByMessage(messageId: String): Flow<List<AttachmentEntity>>
 
+    /** 附件中心：全库附件（新→旧），类型筛选在 UI 层按 mimeType 做。 */
+    @Query("SELECT * FROM attachments ORDER BY rowid DESC")
+    fun observeAll(): Flow<List<com.materialmail.core.database.entity.AttachmentEntity>>
+
     @Query("SELECT * FROM attachments WHERE id = :id")
     suspend fun getById(id: String): AttachmentEntity?
 

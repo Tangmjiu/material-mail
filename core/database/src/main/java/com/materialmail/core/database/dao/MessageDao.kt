@@ -11,6 +11,28 @@ interface MessageDao {
     @Upsert
     suspend fun upsertAll(messages: List<MessageEntity>)
 
+    // ── 订阅管理（List-Unsubscribe，RFC 2369）──────────────────────
+
+    /** 有退订入口的发件人聚合：地址 + 邮件数 + 最近一封时间。 */
+    @Query(
+        "SELECT fromAddress, COUNT(*) AS cnt, MAX(sentAtEpochMs) AS latestAt " +
+            "FROM messages WHERE listUnsubscribe IS NOT NULL " +
+            "GROUP BY fromAddress ORDER BY latestAt DESC",
+    )
+    fun observeSubscriptions(): Flow<List<SubscriptionCount>>
+
+    /** 该发件人最近一封邮件的退订链接原文（可能含 mailto: 与 https: 多个）。 */
+    @Query(
+        "SELECT listUnsubscribe FROM messages " +
+            "WHERE fromAddress = :fromAddress AND listUnsubscribe IS NOT NULL " +
+            "ORDER BY sentAtEpochMs DESC LIMIT 1",
+    )
+    suspend fun latestUnsubscribeLink(fromAddress: String): String?
+
+    /** 该发件人所有邮件所在线程（归档全部用）。 */
+    @Query("SELECT DISTINCT threadId FROM messages WHERE fromAddress = :fromAddress")
+    suspend fun threadIdsBySender(fromAddress: String): List<String>
+
     @Query("SELECT * FROM messages WHERE threadId = :threadId ORDER BY sentAtEpochMs ASC")
     fun observeByThread(threadId: String): Flow<List<MessageEntity>>
 
@@ -74,3 +96,9 @@ interface MessageDao {
     )
     suspend fun updateBody(id: String, snippet: String, plainTextPath: String?, htmlPath: String?)
 }
+/** 订阅聚合行（订阅管理页用）。 */
+data class SubscriptionCount(
+    val fromAddress: String,
+    val cnt: Int,
+    val latestAt: Long,
+)

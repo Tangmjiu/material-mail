@@ -62,5 +62,6 @@ if (proEnabled && java.io.File(rootDir, "pro").isDirectory) {
     include(":pro:connectors")
     include(":pro:personalization")
     include(":pro:stats")
+    include(":pro:extras")
     include(":pro:app")
 }

@@ -6,3 +6,7 @@ plugins {
 android {
     namespace = "com.materialmail.designsystem"
 }
+
+dependencies {
+    implementation(libs.compose.material.icons.extended)
+}

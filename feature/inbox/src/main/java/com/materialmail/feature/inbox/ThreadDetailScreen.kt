@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.automirrored.outlined.ReplyAll
@@ -29,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -60,6 +63,32 @@ fun ThreadDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is ThreadDetailEvent.AttachmentReady -> {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        context.packageName + ".fileprovider",
+                        java.io.File(event.path),
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, event.mimeType)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    runCatching { context.startActivity(intent) }.onFailure {
+                        snackbarHostState.showSnackbar("没有可以打开 " + event.fileName + " 的应用")
+                    }
+                }
+                is ThreadDetailEvent.AttachmentFailed ->
+                    snackbarHostState.showSnackbar("附件下载失败：" + event.fileName)
+            }
+        }
+    }
 
     with(sharedTransitionScope) {
         Scaffold(
@@ -67,6 +96,7 @@ fun ThreadDetailScreen(
                 rememberSharedContentState(key = "thread-container-$threadId"),
                 animatedVisibilityScope = animatedVisibilityScope,
             ),
+            snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     navigationIcon = {
@@ -127,7 +157,10 @@ fun ThreadDetailScreen(
                         .fillMaxWidth(),
                 ) {
                     items(items = uiState.messages, key = { it.messageId }) { message ->
-                        MessageBlock(message)
+                        MessageBlock(
+                            message = message,
+                            onOpenAttachment = viewModel::openAttachment,
+                        )
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         )
@@ -139,7 +172,10 @@ fun ThreadDetailScreen(
 }
 
 @Composable
-private fun MessageBlock(message: DetailMessageUi) {
+private fun MessageBlock(
+    message: DetailMessageUi,
+    onOpenAttachment: (AttachmentUi) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -183,6 +219,12 @@ private fun MessageBlock(message: DetailMessageUi) {
                 )
             }
 
+            // HTML 邮件走隔离渲染器（禁 JS/禁网络/防追踪像素）
+            message.isHtml -> MailBodyWebView(
+                html = message.bodyText,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             else -> SelectionContainer {
                 // 排版规范：正文 bodyLarge、行高 1.6
                 Text(
@@ -190,6 +232,39 @@ private fun MessageBlock(message: DetailMessageUi) {
                     style = MailTypeScale.composerBody,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+            }
+        }
+        if (message.attachments.isNotEmpty()) {
+            Spacer(Modifier.height(MailTheme.spacing.md))
+            Row(horizontalArrangement = Arrangement.spacedBy(MailTheme.spacing.sm)) {
+                message.attachments.forEach { attachment ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        shape = MaterialTheme.shapes.small,
+                        onClick = { onOpenAttachment(attachment) },
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(
+                                horizontal = MailTheme.spacing.md,
+                                vertical = MailTheme.spacing.sm,
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Outlined.AttachFile,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.width(MailTheme.spacing.xs))
+                            Text(
+                                attachment.fileName +
+                                    if (attachment.sizeText.isNotEmpty()) "（" + attachment.sizeText + "）" else "",
+                                style = MailTypeScale.meta,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -30,6 +30,8 @@ data class ParsedMimeMessage(
 )
 
 data class ParsedAttachment(
+    /** 在 MIME 树中的出现顺序：与 BodyLoader 落库的附件行下标一致。 */
+    val partIndex: Int,
     val fileName: String,
     val mimeType: String,
     val sizeBytes: Long,
@@ -75,6 +77,7 @@ object MimeParser {
     private class BodyParts {
         var plainText: String? = null
         var html: String? = null
+        var attachmentCounter = 0
     }
 
     /** 递归遍历 multipart，提取正文与附件。 */
@@ -93,7 +96,7 @@ object MimeParser {
 
             part.isMimeType("text/html") -> {
                 if (Part.ATTACHMENT.equals(part.disposition, ignoreCase = true)) {
-                    attachments += part.toAttachment()
+                    attachments += part.toAttachment(bodies.attachmentCounter++)
                 } else if (bodies.html == null) {
                     bodies.html = part.contentAsString()
                 }
@@ -101,21 +104,22 @@ object MimeParser {
 
             part.isMimeType("text/plain") -> {
                 if (Part.ATTACHMENT.equals(part.disposition, ignoreCase = true)) {
-                    attachments += part.toAttachment()
+                    attachments += part.toAttachment(bodies.attachmentCounter++)
                 } else if (bodies.plainText == null) {
                     bodies.plainText = part.contentAsString()
                 }
             }
 
             part.disposition != null || part.fileName != null -> {
-                attachments += part.toAttachment()
+                attachments += part.toAttachment(bodies.attachmentCounter++)
             }
         }
     }
 
     private fun Part.contentAsString(): String = content.toString()
 
-    private fun Part.toAttachment(): ParsedAttachment = ParsedAttachment(
+    private fun Part.toAttachment(index: Int): ParsedAttachment = ParsedAttachment(
+        partIndex = index,
         fileName = fileName ?: "attachment",
         mimeType = contentType.substringBefore(';').trim().lowercase(),
         sizeBytes = size.takeIf { it >= 0 }?.toLong() ?: 0L,

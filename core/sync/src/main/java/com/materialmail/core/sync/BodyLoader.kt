@@ -57,6 +57,26 @@ class BodyLoader(
             val snippetSource = parsed.plainTextBody ?: parsed.htmlBody?.stripHtmlTags() ?: ""
             val snippet = snippetSource.replace(Regex("\\s+"), " ").take(140)
 
+            // 附件元数据落库（内容仍惰性：点击时才真正下载）
+            database.attachmentDao().deleteByMessage(entity.id)
+            database.attachmentDao().upsertAll(
+                parsed.attachments.map { attachment ->
+                    com.materialmail.core.database.entity.AttachmentEntity(
+                        id = entity.id + "#att" + attachment.partIndex,
+                        messageId = entity.id,
+                        fileName = attachment.fileName,
+                        mimeType = attachment.mimeType,
+                        sizeBytes = attachment.sizeBytes,
+                        localUri = null,
+                        contentId = attachment.contentId,
+                    )
+                },
+            )
+            database.messageDao().updateHasAttachments(
+                entity.id,
+                parsed.attachments.isNotEmpty(),
+            )
+
             val stored = bodyStore.save(
                 accountId = account.id.value,
                 messageId = messageId,

@@ -57,6 +57,9 @@ interface MessageDao {
     @Query("DELETE FROM messages WHERE folderId = :folderId")
     suspend fun deleteByFolder(folderId: String)
 
+    @Query("UPDATE messages SET hasAttachments = :hasAttachments WHERE id = :id")
+    suspend fun updateHasAttachments(id: String, hasAttachments: Boolean)
+
     /** 正文懒加载完成后回写。 */
     @Query(
         "UPDATE messages SET snippet = :snippet, plainTextPath = :plainTextPath, " +

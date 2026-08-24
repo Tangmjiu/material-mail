@@ -158,6 +158,7 @@ fun MaterialMailNavHost(
                         database = container.database,
                         bodyLoader = container.bodyLoader,
                         actionPerformer = container.actionPerformer,
+                        attachmentDownloader = container.attachmentDownloader,
                     ),
                 )
                 ThreadDetailScreen(

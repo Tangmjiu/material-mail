@@ -14,6 +14,7 @@ import com.materialmail.core.database.DatabaseFactory
 import com.materialmail.core.database.MaterialMailDatabase
 import com.materialmail.core.mail.imap.AuthCredentials
 import com.materialmail.core.sync.AccountCredentialProvider
+import com.materialmail.core.sync.AttachmentDownloader
 import com.materialmail.core.sync.BodyLoader
 import com.materialmail.core.sync.MessageActionPerformer
 import com.materialmail.core.sync.MessageSender
@@ -47,6 +48,8 @@ class AppContainer(context: Context) {
     val actionPerformer: MessageActionPerformer =
         MessageActionPerformer(database, credentialProvider)
     val messageSender: MessageSender = MessageSender(database, credentialProvider)
+    val attachmentDownloader: AttachmentDownloader =
+        AttachmentDownloader(context, database, credentialProvider)
     val searchProvider: FtsSearchProvider = FtsSearchProvider(database)
     val syncSettings: SyncSettingsStore = SyncSettingsStore(context)
 

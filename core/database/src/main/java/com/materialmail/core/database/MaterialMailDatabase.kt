@@ -11,6 +11,7 @@ import com.materialmail.core.database.dao.FolderDao
 import com.materialmail.core.database.dao.LabelDao
 import com.materialmail.core.database.dao.MessageDao
 import com.materialmail.core.database.dao.SearchDao
+import com.materialmail.core.database.dao.StatsDao
 import com.materialmail.core.database.dao.ThreadDao
 import com.materialmail.core.database.entity.AccountEntity
 import com.materialmail.core.database.entity.ActionLogEntity
@@ -45,6 +46,7 @@ abstract class MaterialMailDatabase : RoomDatabase() {
     abstract fun threadDao(): ThreadDao
     abstract fun messageDao(): MessageDao
     abstract fun searchDao(): SearchDao
+    abstract fun statsDao(): StatsDao
     abstract fun attachmentDao(): AttachmentDao
     abstract fun draftDao(): DraftDao
     abstract fun labelDao(): LabelDao

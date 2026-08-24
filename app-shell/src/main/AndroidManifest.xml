@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
+        <!-- 公开 Intent API（Tasker/Termux），文档见 docs/INTENT-API.md -->
+        <receiver
+            android:name="com.materialmail.appshell.IntentApiReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.materialmail.action.SYNC_NOW" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name="com.materialmail.appshell.NotificationActionReceiver"
             android:exported="false" />

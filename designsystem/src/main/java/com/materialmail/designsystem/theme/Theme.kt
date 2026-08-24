@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 /**
  * Material Mail 主题入口。
@@ -19,9 +20,13 @@ import androidx.compose.ui.platform.LocalContext
 fun MaterialMailTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    /** Pro 个性化：覆盖种子色（仅影响 primary 系角色，spine/FAB/选中态）。 */
+    primaryOverride: androidx.compose.ui.graphics.Color? = null,
+    /** Pro 个性化：紧凑列表密度。 */
+    compactSpacing: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
+    val baseScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -29,8 +34,22 @@ fun MaterialMailTheme(
         darkTheme -> DarkScheme
         else -> LightScheme
     }
+    val colorScheme = if (primaryOverride != null) {
+        baseScheme.copy(
+            primary = primaryOverride,
+            primaryContainer = primaryOverride.copy(alpha = 0.2f),
+        )
+    } else {
+        baseScheme
+    }
 
-    CompositionLocalProvider(LocalSpacing provides Spacing()) {
+    CompositionLocalProvider(
+        LocalSpacing provides if (compactSpacing) {
+            Spacing(listItemVertical = 8.dp)
+        } else {
+            Spacing()
+        },
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = MailTypography,

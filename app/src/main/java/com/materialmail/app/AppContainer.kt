@@ -10,6 +10,9 @@ import com.materialmail.agent.audit.ActionLogWriter
 import com.materialmail.agent.execution.ConfirmationGate
 import com.materialmail.agent.execution.ConfirmationTokenIssuer
 import com.materialmail.agent.permissions.AgentPermissionStore
+import com.materialmail.agent.yolo.YoloCapabilityStore
+import com.materialmail.agent.yolo.YoloSessionManager
+import com.materialmail.agent.yolo.YoloStatusNotifier
 import com.materialmail.core.search.FtsSearchProvider
 import com.materialmail.core.crypto.StoredCredential
 import com.materialmail.core.database.BodyStore
@@ -61,10 +64,16 @@ class AppContainer(context: Context) {
     val agentPermissionStore = AgentPermissionStore(context)
     val actionLogWriter = ActionLogWriter(database)
     val actionLogReader = ActionLogReader(database)
+    val yoloCapabilityStore = YoloCapabilityStore(context)
+    val yoloSessionManager = YoloSessionManager(yoloCapabilityStore)
+    val yoloStatusNotifier = YoloStatusNotifier(context)
+
+    // Gate 的 YOLO 扩展点接入真实实现：session 管理器即 provider
     val confirmationGate = ConfirmationGate(
         permissionStore = agentPermissionStore,
         tokenIssuer = ConfirmationTokenIssuer(),
         audit = actionLogWriter,
+        yolo = yoloSessionManager,
     )
 
     // ── Region（自包含模块，可整体摘除）─────────────────────

@@ -43,6 +43,7 @@ fun SettingsScreen(
     onOpenActionLog: () -> Unit,
     onOpenAgentPermissions: () -> Unit,
     onOpenRegion: () -> Unit,
+    onOpenYolo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -117,6 +118,13 @@ fun SettingsScreen(
                     title = "操作记录",
                     subtitle = "Agent 每次执行的完整审计日志",
                     onClick = onOpenActionLog,
+                )
+            }
+            item {
+                SettingsEntry(
+                    title = "YOLO Mode",
+                    subtitle = "Experimental high-risk feature",
+                    onClick = onOpenYolo,
                 )
             }
             item { DividerItem() }

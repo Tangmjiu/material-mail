@@ -41,6 +41,8 @@ import com.materialmail.feature.settings.SettingsScreen
 import com.materialmail.feature.settings.SettingsViewModel
 import com.materialmail.region.ui.RegionSettingsScreen
 import com.materialmail.region.ui.RegionSettingsViewModel
+import com.materialmail.feature.settings.yolo.YoloScreen
+import com.materialmail.feature.settings.yolo.YoloViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +110,21 @@ fun MaterialMailNavHost(
                         navController.navigate(SettingsRoutes.AGENT_PERMISSIONS)
                     },
                     onOpenRegion = { navController.navigate(SettingsRoutes.REGION) },
+                    onOpenYolo = { navController.navigate(SettingsRoutes.YOLO) },
                 )
+            }
+            composable(SettingsRoutes.YOLO) {
+                val viewModel: YoloViewModel = viewModel(
+                    factory = YoloViewModel.factory(
+                        store = container.yoloCapabilityStore,
+                        sessionManager = container.yoloSessionManager,
+                        onActiveChanged = { active ->
+                            if (active) container.yoloStatusNotifier.show()
+                            else container.yoloStatusNotifier.hide()
+                        },
+                    ),
+                )
+                YoloScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
             }
             composable(SettingsRoutes.REGION) {
                 val viewModel: RegionSettingsViewModel = viewModel(

@@ -48,7 +48,8 @@ class ConfirmationGate(
         // 第一层：能力授权
         if (!permissionStore.isGranted(action.capability)) {
             audit.log(agentName, action, AuthorizationType.DENIED, ActionResult.DENIED,
-                error = "capability not granted")
+                connectorUsed = null,
+            error = "capability not granted")
             return AgentResult.CapabilityNotGranted
         }
 
@@ -62,7 +63,8 @@ class ConfirmationGate(
 
         if (needsConfirmation && !requestConfirmation.request(action)) {
             audit.log(agentName, action, AuthorizationType.DENIED, ActionResult.DENIED,
-                error = "user denied")
+                connectorUsed = null,
+            error = "user denied")
             return AgentResult.UserDenied
         }
 
@@ -78,7 +80,8 @@ class ConfirmationGate(
             AgentResult.Success(value)
         } catch (e: Exception) {
             audit.log(agentName, action, authorization, ActionResult.FAILED,
-                error = e.message ?: e.javaClass.simpleName)
+                connectorUsed = null,
+            error = e.message ?: e.javaClass.simpleName)
             AgentResult.Failed(e)
         }
     }
@@ -97,14 +100,16 @@ class ConfirmationGate(
     ): ConfirmationToken? {
         if (!permissionStore.isGranted(action.capability)) {
             audit.log(agentName, action, AuthorizationType.DENIED, ActionResult.DENIED,
-                error = "capability not granted")
+                connectorUsed = null,
+            error = "capability not granted")
             return null
         }
         val autonomous = !action.permanent && yolo.active &&
             yolo.allowsAutonomous(action.capability, action.risk)
         if (!autonomous && !requestConfirmation.request(action)) {
             audit.log(agentName, action, AuthorizationType.DENIED, ActionResult.DENIED,
-                error = "user denied")
+                connectorUsed = null,
+            error = "user denied")
             return null
         }
         return tokenIssuer.issue(fingerprint)

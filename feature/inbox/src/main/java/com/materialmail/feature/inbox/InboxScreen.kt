@@ -1,4 +1,7 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.materialmail.feature.inbox
+
 
 import android.Manifest
 import android.os.Build
@@ -21,6 +24,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
@@ -34,15 +41,14 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
@@ -57,6 +63,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -85,11 +93,7 @@ import kotlinx.coroutines.launch
  * - 滑动归档/删除 + Undo；容器变换进入详情；
  * - 抽屉承载文件夹导航（收件箱/已发送/垃圾箱/自定义夹 + 本地草稿）。
  */
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalSharedTransitionApi::class,
-)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun InboxScreen(
     viewModel: InboxViewModel,
@@ -101,17 +105,17 @@ fun InboxScreen(
     onEditDraft: (draftId: String) -> Unit,
     onSearch: () -> Unit,
     onOpenSettings: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+    modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    val ptrState = rememberPullToRefreshState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     // Android 13+：进入可用态时请求一次通知权限；拒绝后不再追问
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { }
+        ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(uiState is InboxUiState.Ready) {
         if (uiState is InboxUiState.Ready && Build.VERSION.SDK_INT >= 33) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -125,8 +129,7 @@ fun InboxScreen(
                 is InboxEvent.Deleted -> "已移入垃圾箱：" + event.threadSubject
             }
             val result = snackbarHostState.showSnackbar(
-                message = message, actionLabel = "撤销", withDismissAction = true,
-            )
+                message = message, actionLabel = "撤销", withDismissAction = true)
             if (result == SnackbarResult.ActionPerformed) viewModel.undoMove()
         }
     }
@@ -150,12 +153,10 @@ fun InboxScreen(
                             scope.launch { drawerState.close() }
                         },
                         onAddAccount = onAddAccount,
-                        onOpenSettings = onOpenSettings,
-                    )
+                        onOpenSettings = onOpenSettings)
                 }
             }
-        },
-    ) {
+        }) {
         Scaffold(
             modifier = modifier,
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -166,24 +167,25 @@ fun InboxScreen(
                             selected = true,
                             onClick = { },
                             icon = { Icon(Icons.Outlined.Inbox, contentDescription = null) },
-                            label = { Text("邮件", style = MailTypeScale.meta) },
-                        )
+                            label = { Text("邮件", style = MailTypeScale.meta) })
                         NavigationBarItem(
                             selected = false,
                             onClick = onSearch,
                             icon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                            label = { Text("搜索", style = MailTypeScale.meta) },
-                        )
+                            label = { Text("搜索", style = MailTypeScale.meta) })
                     }
                 }
             },
             floatingActionButton = {
-                // 设计 §5.7：右下角大号 FAB（写信），28dp Expressive 圆角
+                // MD3E：FAB 随滚动 morph —— 静止 28dp 圆角方块，滚动中弹成圆形（spring 物理）
                 if (uiState is InboxUiState.Ready) {
+                    val fabCorner by animateDpAsState(
+                        targetValue = if (listState.isScrollInProgress) 48.dp else 28.dp,
+                        animationSpec = MailTheme.motionScheme.defaultSpatialSpec(),
+                        label = "fabShapeMorph")
                     LargeFloatingActionButton(
                         onClick = onCompose,
-                        shape = MaterialTheme.shapes.extraLarge,
-                    ) {
+                        shape = RoundedCornerShape(fabCorner)) {
                         Icon(Icons.Outlined.Edit, contentDescription = "写邮件")
                     }
                 }
@@ -203,69 +205,65 @@ fun InboxScreen(
                                 inboxTitle(uiState),
                                 style = MaterialTheme.typography.titleLarge,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                                overflow = TextOverflow.Ellipsis)
                             (uiState as? InboxUiState.Ready)?.let {
                                 Text(
                                     it.accountEmail,
                                     style = MailTypeScale.meta,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                    overflow = TextOverflow.Ellipsis)
                             }
                         }
                     },
                     actions = {
                         if ((uiState as? InboxUiState.Ready)?.syncing == true) {
                             LoadingIndicator(
-                                modifier = Modifier.padding(end = 16.dp).size(24.dp),
-                            )
+                                modifier = Modifier.padding(end = 16.dp).size(32.dp))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                )
-            },
-        ) { innerPadding ->
+                        containerColor = MaterialTheme.colorScheme.surface))
+            }) { innerPadding ->
             when (val state = uiState) {
                 InboxUiState.Loading -> Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentAlignment = Alignment.Center,
-                ) { LoadingIndicator() }
+                    contentAlignment = Alignment.Center) { LoadingIndicator() }
 
                 InboxUiState.NoAccount -> NoAccountState(
                     onAddAccount = onAddAccount,
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                )
+                    modifier = Modifier.fillMaxSize().padding(innerPadding))
 
                 is InboxUiState.Ready -> PullToRefreshBox(
                     isRefreshing = state.syncing,
                     onRefresh = viewModel::refresh,
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                ) {
+                    state = ptrState,
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = ptrState,
+                            isRefreshing = state.syncing,
+                            modifier = Modifier.align(Alignment.TopCenter))
+                    },
+                    modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                     when (state.destination) {
                         InboxDestination.Drafts -> DraftList(
                             drafts = state.drafts,
                             onEditDraft = onEditDraft,
-                            onDeleteDraft = viewModel::deleteDraft,
-                        )
+                            onDeleteDraft = viewModel::deleteDraft)
 
                         is InboxDestination.FolderDest ->
                             if (state.threads.isEmpty()) {
                                 EmptyInboxState(
                                     folderName = state.destination.displayName,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
+                                    modifier = Modifier.fillMaxSize())
                             } else {
                                 ThreadList(
                                     threads = state.threads,
+                                    listState = listState,
                                     viewModel = viewModel,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
-                                    onOpenThread = onOpenThread,
-                                )
+                                    onOpenThread = onOpenThread)
                             }
                     }
                 }
@@ -289,19 +287,16 @@ private fun DrawerContent(
     onSelectFolder: (FolderUi) -> Unit,
     onSelectDrafts: () -> Unit,
     onAddAccount: () -> Unit,
-    onOpenSettings: () -> Unit,
-) {
+    onOpenSettings: () -> Unit) {
     Column(modifier = Modifier.padding(MailTheme.spacing.lg)) {
         Text(
             state.accountEmail,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+            color = MaterialTheme.colorScheme.onSurface)
         Text(
             "Material Mail",
             style = MailTypeScale.meta,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     // 多账户切换（设计 MVP P1）
     if (state.accounts.size > 1) {
@@ -316,9 +311,7 @@ private fun DrawerContent(
                         .clickable { onSelectAccount(accountId) }
                         .padding(
                             horizontal = MailTheme.spacing.lg,
-                            vertical = MailTheme.spacing.sm,
-                        ),
-                )
+                            vertical = MailTheme.spacing.sm))
             }
         }
     }
@@ -336,15 +329,13 @@ private fun DrawerContent(
                             Text(
                                 folder.unreadCount.toString(),
                                 style = MailTypeScale.meta,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
+                                color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
                 icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                 selected = selected,
-                onClick = { onSelectFolder(folder) },
-            )
+                onClick = { onSelectFolder(folder) })
         }
         item(key = "drafts") {
             NavigationDrawerItem(
@@ -355,23 +346,20 @@ private fun DrawerContent(
                             Text(
                                 state.drafts.size.toString(),
                                 style = MailTypeScale.meta,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 },
                 icon = { Icon(Icons.Outlined.Drafts, contentDescription = null) },
                 selected = state.destination == InboxDestination.Drafts,
-                onClick = onSelectDrafts,
-            )
+                onClick = onSelectDrafts)
         }
         item(key = "settings") {
             NavigationDrawerItem(
                 label = { Text("设置") },
                 icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                 selected = false,
-                onClick = onOpenSettings,
-            )
+                onClick = onOpenSettings)
         }
         item(key = "add-account") {
             TextButton(onClick = onAddAccount) {
@@ -385,12 +373,12 @@ private fun DrawerContent(
 @Composable
 private fun ThreadList(
     threads: List<InboxThreadUi>,
+    listState: LazyListState,
     viewModel: InboxViewModel,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
-    onOpenThread: (threadId: String) -> Unit,
-) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    onOpenThread: (threadId: String) -> Unit) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
         items(items = threads, key = { it.threadId }) { thread ->
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
@@ -403,9 +391,10 @@ private fun ThreadList(
                         else -> Unit
                     }
                     false
-                },
-            )
+                })
             SwipeToDismissBox(
+                // 行删除/归档后，邻近行按 spring 物理补位（Expressive 默认 spec）
+                modifier = Modifier.animateItem(),
                 state = dismissState,
                 backgroundContent = {
                     val deleting =
@@ -415,12 +404,10 @@ private fun ThreadList(
                             .fillMaxSize()
                             .background(
                                 if (deleting) MaterialTheme.colorScheme.errorContainer
-                                else MaterialTheme.colorScheme.primaryContainer,
-                            )
+                                else MaterialTheme.colorScheme.primaryContainer)
                             .padding(horizontal = MailTheme.spacing.xl),
                         contentAlignment =
-                            if (deleting) Alignment.CenterStart else Alignment.CenterEnd,
-                    ) {
+                            if (deleting) Alignment.CenterStart else Alignment.CenterEnd) {
                         Icon(
                             if (deleting) Icons.Outlined.Delete else Icons.Outlined.Archive,
                             contentDescription = if (deleting) "删除" else "归档",
@@ -428,11 +415,9 @@ private fun ThreadList(
                                 MaterialTheme.colorScheme.onErrorContainer
                             } else {
                                 MaterialTheme.colorScheme.onPrimaryContainer
-                            },
-                        )
+                            })
                     }
-                },
-            ) {
+                }) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -442,27 +427,21 @@ private fun ThreadList(
                                 with(sharedTransitionScope) {
                                     Modifier.sharedElement(
                                         rememberSharedContentState(
-                                            key = "thread-container-" + thread.threadId,
-                                        ),
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                    )
+                                            key = "thread-container-" + thread.threadId),
+                                        animatedVisibilityScope = animatedVisibilityScope)
                                 }
                             } else {
                                 Modifier
-                            },
-                        )
-                        .clickable { onOpenThread(thread.threadId) },
-                ) {
+                            })
+                        .clickable { onOpenThread(thread.threadId) }) {
                     MailListItem(
                         sender = thread.senderLine,
                         subject = thread.subject,
                         preview = thread.snippet,
                         time = thread.timeText,
-                        unread = thread.unread,
-                    )
+                        unread = thread.unread)
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    )
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh)
                 }
             }
         }
@@ -473,15 +452,13 @@ private fun ThreadList(
 private fun DraftList(
     drafts: List<DraftUi>,
     onEditDraft: (String) -> Unit,
-    onDeleteDraft: (String) -> Unit,
-) {
+    onDeleteDraft: (String) -> Unit) {
     if (drafts.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 "没有草稿。写信时退出会自动保存。",
                 style = MailTypeScale.preview,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
@@ -490,22 +467,19 @@ private fun DraftList(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onEditDraft(draft.draftId) },
-            ) {
+                    .clickable { onEditDraft(draft.draftId) }) {
                 MailListItem(
                     sender = draft.toLine,
                     subject = draft.subject,
                     preview = "",
                     time = draft.timeText,
-                    unread = false,
-                )
+                    unread = false)
                 Row(modifier = Modifier.padding(start = MailTheme.spacing.lg)) {
                     TextButton(onClick = { onDeleteDraft(draft.draftId) }) {
                         Text(
                             "删除草稿",
                             style = MailTypeScale.meta,
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                            color = MaterialTheme.colorScheme.error)
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -519,33 +493,28 @@ private fun NoAccountState(onAddAccount: () -> Unit, modifier: Modifier = Modifi
     Column(
         modifier = modifier.padding(MailTheme.spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+        verticalArrangement = Arrangement.Center) {
         Icon(
             Icons.Outlined.Inbox,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.outline,
-        )
+            tint = MaterialTheme.colorScheme.outline)
         Spacer(Modifier.height(MailTheme.spacing.xl))
         Text(
             "还没有邮箱账户",
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+            color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(MailTheme.spacing.sm))
         Text(
             "添加账户后即可离线收件。支持 Gmail / QQ / 163 / Outlook 预设与任意 IMAP 服务器。",
             style = MailTypeScale.preview,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+            textAlign = TextAlign.Center)
         Spacer(Modifier.height(MailTheme.spacing.xl))
         androidx.compose.material3.Button(
             onClick = onAddAccount,
             modifier = Modifier.height(52.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-        ) {
+            shape = MaterialTheme.shapes.extraLarge) {
             Text("添加账户", style = MaterialTheme.typography.titleMedium)
         }
     }
@@ -556,26 +525,22 @@ private fun EmptyInboxState(folderName: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(MailTheme.spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+        verticalArrangement = Arrangement.Center) {
         Icon(
             Icons.Outlined.Inbox,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.outline,
-        )
+            tint = MaterialTheme.colorScheme.outline)
         Spacer(Modifier.height(MailTheme.spacing.xl))
         Text(
             "$folderName 是空的",
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+            color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(MailTheme.spacing.sm))
         Text(
             "下拉即可刷新。新邮件也会通过周期同步到达（受系统省电策略影响可能有延迟）。",
             style = MailTypeScale.preview,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+            textAlign = TextAlign.Center)
     }
 }

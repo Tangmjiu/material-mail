@@ -58,6 +58,8 @@ fun MaterialMailNavHost(
     extraGraph: androidx.navigation.NavGraphBuilder.(AppContainer, NavHostController) -> Unit = { _, _ -> },
     /** Pro 功能入口（pro:app 按授权态计算；Community 恒为空列表）。 */
     proEntries: (NavHostController) -> List<com.materialmail.feature.settings.ProEntry> = { emptyList() },
+    /** Pro 状态横幅（pro:app 注入；Community 恒 null）。 */
+    proBanner: (@Composable () -> Unit)? = null,
     /** Pro 详情页动作槽（Snooze/快速回复等）。 */
     detailExtras: () -> List<com.materialmail.feature.inbox.DetailExtraAction> = { emptyList() },
     /** Pro 写信页动作槽（模板/定时发送），参数为该页的 ViewModel。 */
@@ -132,6 +134,7 @@ fun MaterialMailNavHost(
                 SettingsScreen(
                     viewModel = viewModel,
                     proEntries = proEntries(navController),
+                    proBanner = proBanner,
                     onBack = { navController.popBackStack() },
                     onOpenActionLog = { navController.navigate(SettingsRoutes.ACTION_LOG) },
                     onOpenAgentPermissions = {

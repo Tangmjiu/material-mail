@@ -5,7 +5,7 @@ coreKtx = "1.16.0"
 activityCompose = "1.10.1"
 lifecycle = "2.9.1"
 composeBom = "2025.06.01"
-material3 = "1.4.0"          # 含 Material 3 Expressive API
+material3 = "1.5.0-alpha12"   # MD3 Expressive 完整组件集（ButtonGroup/SplitButton/波浪 LoadingIndicator/MotionScheme）
 coroutines = "1.10.2"
 # 后续阶段使用（先登记版本，不引入依赖）
 room = "2.7.1"

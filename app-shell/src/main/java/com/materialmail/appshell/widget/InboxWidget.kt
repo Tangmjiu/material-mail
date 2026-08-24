@@ -15,7 +15,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.dp
+import androidx.compose.ui.unit.dp
 import com.materialmail.appshell.AppContainerProvider
 import com.materialmail.core.database.toModel
 import kotlinx.coroutines.flow.first

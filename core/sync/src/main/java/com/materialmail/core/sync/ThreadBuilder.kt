@@ -61,7 +61,7 @@ class ThreadBuilder(private val database: MaterialMailDatabase) {
             )
         }
 
-        currentMessagesByHeader = deduped.associateBy { it.messageIdHeader }
+        val currentMessagesByHeader = deduped.associateBy { it.messageIdHeader }
         val roots = Threader.thread(inputs)
 
         val threadEntities = mutableListOf<ThreadEntity>()

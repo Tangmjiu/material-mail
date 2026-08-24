@@ -18,10 +18,9 @@ import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -45,7 +44,7 @@ import com.materialmail.designsystem.theme.MailTheme
 import com.materialmail.designsystem.theme.MailTypeScale
 
 /** 添加账户。单手优先：主操作在底部，表单区块用色阶容器而非卡片堆叠。 */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAccountScreen(
     viewModel: AddAccountViewModel,
@@ -89,7 +88,7 @@ fun AddAccountScreen(
                         shape = MaterialTheme.shapes.extraLarge,
                     ) {
                         if (uiState.saving) {
-                            LoadingIndicator(modifier = Modifier.height(20.dp))
+                            CircularProgressIndicator(modifier = Modifier.height(20.dp))
                         } else {
                             Text("保存并同步", style = MaterialTheme.typography.titleMedium)
                         }

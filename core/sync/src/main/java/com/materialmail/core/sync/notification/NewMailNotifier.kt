@@ -53,7 +53,7 @@ class NewMailNotifier(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_email)
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
 

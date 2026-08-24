@@ -31,8 +31,8 @@ interface ActionLogSink {
         action: AgentAction,
         authorization: AuthorizationType,
         result: ActionResult,
-        connectorUsed: String?,
-        error: String?,
+        connectorUsed: String? = null,
+        error: String? = null,
     )
 }
 
@@ -44,8 +44,8 @@ class ActionLogWriter(private val database: MaterialMailDatabase) : ActionLogSin
         action: AgentAction,
         authorization: AuthorizationType,
         result: ActionResult,
-        connectorUsed: String? = null,
-        error: String? = null,
+        connectorUsed: String?,
+        error: String?,
     ) {
         database.actionLogDao().insert(
             ActionLogEntity(

@@ -53,7 +53,7 @@ sealed interface SendResult {
 }
 
 /**
- * IM Connector 契约（Pro 功能，pro/connectors/* 实现）。
+ * IM Connector 契约（Pro 功能，pro/connectors 等实现）。
  * 发送是两阶段协议：prepareSend → 用户确认 → executeSend(token)。
  */
 interface MessageConnector {

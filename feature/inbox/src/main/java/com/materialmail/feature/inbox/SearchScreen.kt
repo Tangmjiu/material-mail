@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,14 +43,13 @@ import com.materialmail.designsystem.theme.MailTypeScale
  * 本地搜索。纯本地 FTS，零网络（Local-first）。
  * 结果行复用 MailListItem：同一套排版层级，搜索结果不另起设计语言。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
     onBack: () -> Unit,
     onOpenThread: (threadId: String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+    modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
 
@@ -74,29 +72,22 @@ fun SearchScreen(
                             Text(
                                 "搜索邮件",
                                 style = MailTypeScale.subject,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
+                                color = MaterialTheme.colorScheme.outline)
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         textStyle = MailTypeScale.subject.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                        ),
+                            color = MaterialTheme.colorScheme.onSurface),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                    )
+                            unfocusedIndicatorColor = Color.Transparent),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester))
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-        },
-    ) { innerPadding ->
+                    containerColor = MaterialTheme.colorScheme.surface))
+        }) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             if (uiState.searching) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -104,24 +95,20 @@ fun SearchScreen(
             when {
                 uiState.searchedEmpty -> Box(
                     modifier = Modifier.fillMaxSize().padding(MailTheme.spacing.xxl),
-                    contentAlignment = Alignment.Center,
-                ) {
+                    contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Outlined.Search,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                        )
+                            tint = MaterialTheme.colorScheme.outline)
                         Text(
                             "没有找到匹配的邮件",
                             style = MailTypeScale.preview,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             "搜索范围：主题、摘要、发件人（本地索引）",
                             style = MailTypeScale.meta,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
+                            color = MaterialTheme.colorScheme.outline)
                     }
                 }
 
@@ -130,8 +117,7 @@ fun SearchScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onOpenThread(result.threadId) },
-                        ) {
+                                .clickable { onOpenThread(result.threadId) }) {
                             MailListItem(
                                 sender = result.senderLine,
                                 subject = result.subject,
@@ -140,8 +126,7 @@ fun SearchScreen(
                                 unread = false, // 搜索结果不表达读/未读状态
                             )
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            )
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh)
                         }
                     }
                 }

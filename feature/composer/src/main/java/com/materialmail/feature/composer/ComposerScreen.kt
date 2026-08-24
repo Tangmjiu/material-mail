@@ -1,7 +1,5 @@
 package com.materialmail.feature.composer
 
-/** Composer 附加动作（Pro 注入点）。 */
-data class ComposerExtraAction(val label: String, val onClick: () -> Unit)
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,7 +21,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.materialmail.designsystem.theme.MailTheme
 import com.materialmail.designsystem.theme.MailTypeScale
@@ -61,7 +59,7 @@ import com.materialmail.designsystem.theme.MailTypeScale
  * - 正文排版 = composerBody（bodyLarge，行高 1.6）；
  * - 关闭不丢内容：草稿防抖自动保存，退出即已落库。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ComposerScreen(
     viewModel: ComposerViewModel,
@@ -70,16 +68,14 @@ fun ComposerScreen(
     /** Pro 动作槽（模板/定时发送等，pro:app 注入；Community 恒空）。 */
     extraActions: List<ComposerExtraAction> = emptyList(),
     onSent: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+    modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     // SAF 选附件（可多选；不持久化授权——草稿不保存附件，诚实告知）
     val attachmentPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
+        ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris?.forEach { uri ->
             runCatching {
                 val name = context.contentResolver.query(uri, null, null, null, null)?.use { c ->
@@ -122,8 +118,7 @@ fun ComposerScreen(
                                 ComposeMode.REPLY, ComposeMode.REPLY_ALL -> "回复"
                                 ComposeMode.FORWARD -> "转发"
                             },
-                            style = MaterialTheme.typography.titleLarge,
-                        )
+                            style = MaterialTheme.typography.titleLarge)
                     },
                     actions = {
                         if (extraActions.isNotEmpty()) {
@@ -134,32 +129,27 @@ fun ComposerScreen(
                                 }
                                 androidx.compose.material3.DropdownMenu(
                                     expanded = menuOpen,
-                                    onDismissRequest = { menuOpen = false },
-                                ) {
+                                    onDismissRequest = { menuOpen = false }) {
                                     extraActions.forEach { action ->
                                         androidx.compose.material3.DropdownMenuItem(
                                             text = { Text(action.label) },
-                                            onClick = { menuOpen = false; action.onClick() },
-                                        )
+                                            onClick = { menuOpen = false; action.onClick() })
                                     }
                                 }
                             }
                         }
                         IconButton(
                             onClick = { attachmentPicker.launch(arrayOf("*/*")) },
-                            enabled = !uiState.sending,
-                        ) {
+                            enabled = !uiState.sending) {
                             Icon(
                                 Icons.Outlined.AttachFile,
                                 contentDescription = "添加附件（草稿不保存附件）",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
                             uiState.accountEmail,
                             style = MailTypeScale.meta,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(MailTheme.spacing.sm))
                         IconButton(onClick = viewModel::send, enabled = !uiState.sending) {
                             Icon(
@@ -169,26 +159,21 @@ fun ComposerScreen(
                                     MaterialTheme.colorScheme.outline
                                 } else {
                                     MaterialTheme.colorScheme.primary
-                                },
-                            )
+                                })
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                )
+                        containerColor = MaterialTheme.colorScheme.surface))
                 if (uiState.sending) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
-        },
-    ) { innerPadding ->
+        }) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = MailTheme.spacing.lg),
-        ) {
+                .padding(horizontal = MailTheme.spacing.lg)) {
             uiState.error?.let {
                 Spacer(Modifier.height(MailTheme.spacing.sm))
                 Text(it, style = MailTypeScale.preview, color = MaterialTheme.colorScheme.error)
@@ -198,27 +183,23 @@ fun ComposerScreen(
                 value = uiState.to,
                 onValueChange = viewModel::onToChanged,
                 label = "收件人",
-                keyboardType = KeyboardType.Email,
-            )
+                keyboardType = KeyboardType.Email)
             // 收件人联想（本地数据，零权限零网络）
             uiState.suggestions.forEach { suggestion ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { viewModel.applySuggestion(suggestion) }
-                        .padding(vertical = MailTheme.spacing.sm),
-                ) {
+                        .padding(vertical = MailTheme.spacing.sm)) {
                     Text(
                         suggestion.displayName,
                         style = MailTypeScale.subject,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                        color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(MailTheme.spacing.sm))
                     Text(
                         suggestion.address,
                         style = MailTypeScale.meta,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -234,15 +215,13 @@ fun ComposerScreen(
                     value = uiState.cc,
                     onValueChange = viewModel::onCcChanged,
                     label = "抄送",
-                    keyboardType = KeyboardType.Email,
-                )
+                    keyboardType = KeyboardType.Email)
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
                 ComposerField(
                     value = uiState.bcc,
                     onValueChange = viewModel::onBccChanged,
                     label = "密送",
-                    keyboardType = KeyboardType.Email,
-                )
+                    keyboardType = KeyboardType.Email)
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
             }
 
@@ -250,8 +229,7 @@ fun ComposerScreen(
                 value = uiState.subject,
                 onValueChange = viewModel::onSubjectChanged,
                 label = "主题",
-                keyboardType = KeyboardType.Text,
-            )
+                keyboardType = KeyboardType.Text)
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
 
             if (uiState.attachments.isNotEmpty()) {
@@ -259,8 +237,7 @@ fun ComposerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = MailTheme.spacing.sm),
-                    horizontalArrangement = Arrangement.spacedBy(MailTheme.spacing.sm),
-                ) {
+                    horizontalArrangement = Arrangement.spacedBy(MailTheme.spacing.sm)) {
                     uiState.attachments.forEachIndexed { index, attachment ->
                         InputChip(
                             selected = false,
@@ -269,17 +246,14 @@ fun ComposerScreen(
                                 Text(
                                     attachment.fileName,
                                     style = MailTypeScale.meta,
-                                    maxLines = 1,
-                                )
+                                    maxLines = 1)
                             },
                             trailingIcon = {
                                 Icon(
                                     Icons.Outlined.Close,
                                     contentDescription = "移除附件",
-                                    modifier = Modifier.height(16.dp),
-                                )
-                            },
-                        )
+                                    modifier = Modifier.height(16.dp))
+                            })
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -292,17 +266,14 @@ fun ComposerScreen(
                     Text(
                         "正文",
                         style = MailTypeScale.composerBody,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
+                        color = MaterialTheme.colorScheme.outline)
                 },
                 textStyle = MailTypeScale.composerBody.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                ),
+                    color = MaterialTheme.colorScheme.onSurface),
                 colors = transparentFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-            )
+                    .weight(1f))
         }
     }
 }
@@ -312,8 +283,7 @@ private fun ComposerField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    keyboardType: KeyboardType,
-) {
+    keyboardType: KeyboardType) {
     TextField(
         value = value,
         onValueChange = onValueChange,
@@ -321,11 +291,9 @@ private fun ComposerField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
-            imeAction = ImeAction.Next,
-        ),
+            imeAction = ImeAction.Next),
         colors = transparentFieldColors(),
-        modifier = Modifier.fillMaxWidth(),
-    )
+        modifier = Modifier.fillMaxWidth())
 }
 
 /** Ink & Paper：输入框去容器化，纸面即背景。 */
@@ -334,5 +302,6 @@ private fun transparentFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = Color.Transparent,
     unfocusedContainerColor = Color.Transparent,
     focusedIndicatorColor = Color.Transparent,
-    unfocusedIndicatorColor = Color.Transparent,
-)
+    unfocusedIndicatorColor = Color.Transparent)
+/** Composer 附加动作（Pro 注入点）。 */
+data class ComposerExtraAction(val label: String, val onClick: () -> Unit)

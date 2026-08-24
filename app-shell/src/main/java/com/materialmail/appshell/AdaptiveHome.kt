@@ -1,5 +1,6 @@
 package com.materialmail.appshell
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,6 +29,7 @@ import com.materialmail.feature.inbox.ThreadDetailViewModel
  * 平板/折叠屏双栏主页（设计 §5.7：列表-详情双栏，同一套代码自适应，不是放大）。
  * 双栏模式不做容器变换（两个面板常驻），宽度 400dp 列表 + 弹性详情。
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TwoPaneHome(
     container: AppContainer,

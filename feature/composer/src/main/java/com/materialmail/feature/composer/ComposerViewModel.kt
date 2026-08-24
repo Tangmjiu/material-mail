@@ -372,8 +372,8 @@ class ComposerViewModel(
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 ComposerViewModel(
-                    draftId, replyToMessageId, mode, database, messageSender, bodyLoader,
-                    contactSuggester, prefillTo, prefillSubject, prefillBody,
+                    draftId, replyToMessageId, mode, prefillTo, prefillSubject, prefillBody,
+                    database, messageSender, bodyLoader, contactSuggester,
                 )
             }
         }

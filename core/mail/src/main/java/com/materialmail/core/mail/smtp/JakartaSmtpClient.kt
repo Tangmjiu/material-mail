@@ -3,7 +3,7 @@ package com.materialmail.core.mail.smtp
 import com.materialmail.core.mail.imap.AuthCredentials
 import com.materialmail.core.mail.imap.ServerConfig
 import com.materialmail.core.model.Encryption
-import com.sun.mail.smtp.SMTPTransport
+import org.eclipse.angus.mail.smtp.SMTPTransport
 import jakarta.mail.Session
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage

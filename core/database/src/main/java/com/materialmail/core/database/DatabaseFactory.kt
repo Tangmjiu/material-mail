@@ -2,7 +2,7 @@ package com.materialmail.core.database
 
 import android.content.Context
 import androidx.room.Room
-import net.zetetic.database.sqlcipher.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
  * 数据库工厂。本地加密为**用户可选**（安全模型 §11：默认关闭，
@@ -28,7 +28,7 @@ object DatabaseFactory {
                 ByteArray(buffer.remaining()).also { buffer.get(it) }
             }
             passphrase.fill(' ')
-            builder.openHelperFactory(SupportFactory(passphraseBytes))
+            builder.openHelperFactory(SupportOpenHelperFactory(passphraseBytes))
         }
         // 预发布期策略：schema 变更直接重建（v1→v2 无线上用户）。
         // 首次公开发布前必须替换为正式 Migration 链。

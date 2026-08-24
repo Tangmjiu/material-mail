@@ -16,6 +16,7 @@ dependencies {
     api(project(":core:model"))
     api(project(":core:database"))
     api(project(":core:sync"))
+    api(project(":core:mail"))
     api(project(":core:crypto"))
     api(project(":core:search"))
     api(project(":core:capability"))

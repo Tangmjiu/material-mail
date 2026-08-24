@@ -1,4 +1,7 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.materialmail.feature.inbox
+
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -28,8 +31,9 @@ import androidx.compose.material.icons.automirrored.outlined.ReplyAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -37,6 +41,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -115,6 +121,49 @@ fun ThreadDetailScreen(
     Scaffold(
             modifier = sharedModifier,
             snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                val latestMessageId = uiState.messages.lastOrNull()?.messageId
+                if (latestMessageId != null) {
+                    // MD3E：底部连接按钮组（ButtonGroup），回复系动作集中在拇指可达区，
+                    // 按钮形状由组自动连接，按压有 Expressive 弹性形变
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        ButtonGroup(modifier = Modifier.align(Alignment.Center)) {
+                            clickableItem(
+                                onClick = { onReply(latestMessageId) },
+                                label = "回复",
+                                icon = { Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = null) })
+                            clickableItem(
+                                onClick = { onReplyAll(latestMessageId) },
+                                label = "全部回复",
+                                icon = { Icon(Icons.AutoMirrored.Outlined.ReplyAll, contentDescription = null) })
+                            clickableItem(
+                                onClick = { onForward(latestMessageId) },
+                                label = "转发",
+                                icon = { Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = null) })
+                            if (extraActions.isNotEmpty()) {
+                                clickableItem(
+                                    onClick = { menuOpen = true },
+                                    label = "更多",
+                                    icon = { Icon(Icons.Outlined.MoreVert, contentDescription = null) })
+                            }
+                        }
+                        androidx.compose.material3.DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                            modifier = Modifier.align(Alignment.BottomCenter)) {
+                            extraActions.forEach { action ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(action.label) },
+                                    onClick = {
+                                        menuOpen = false
+                                        action.onClick(latestMessageId, threadId)
+                                    })
+                            }
+                        }
+                    }
+                }
+            },
             topBar = {
                 TopAppBar(
                     navigationIcon = {
@@ -132,51 +181,6 @@ fun ThreadDetailScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                    },
-                    actions = {
-                        val latestMessageId = uiState.messages.lastOrNull()?.messageId
-                        if (latestMessageId != null) {
-                            IconButton(onClick = { onReply(latestMessageId) }) {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.Reply,
-                                    contentDescription = "回复",
-                                )
-                            }
-                            IconButton(onClick = { onReplyAll(latestMessageId) }) {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.ReplyAll,
-                                    contentDescription = "回复全部",
-                                )
-                            }
-                            IconButton(onClick = { onForward(latestMessageId) }) {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.Forward,
-                                    contentDescription = "转发",
-                                )
-                            }
-                            if (extraActions.isNotEmpty()) {
-                                var menuOpen by remember { mutableStateOf(false) }
-                                Box {
-                                    IconButton(onClick = { menuOpen = true }) {
-                                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多操作")
-                                    }
-                                    androidx.compose.material3.DropdownMenu(
-                                        expanded = menuOpen,
-                                        onDismissRequest = { menuOpen = false },
-                                    ) {
-                                        extraActions.forEach { action ->
-                                            androidx.compose.material3.DropdownMenuItem(
-                                                text = { Text(action.label) },
-                                                onClick = {
-                                                    menuOpen = false
-                                                    action.onClick(latestMessageId, threadId)
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -250,7 +254,7 @@ private fun MessageBlock(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MailTheme.spacing.sm),
             ) {
-                LoadingIndicator(modifier = Modifier.height(20.dp).widthIn(max = 20.dp))
+                CircularProgressIndicator(modifier = Modifier.height(20.dp).widthIn(max = 20.dp))
                 Text(
                     "正文加载中…",
                     style = MailTypeScale.preview,

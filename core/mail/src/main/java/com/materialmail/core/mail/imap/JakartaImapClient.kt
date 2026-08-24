@@ -5,13 +5,13 @@ import com.materialmail.core.model.Encryption
 import com.materialmail.core.model.FolderRole
 import com.materialmail.core.model.MessageFlag
 import com.materialmail.core.model.Participant
-import com.sun.mail.imap.IMAPFolder
-import com.sun.mail.imap.IMAPStore
+import org.eclipse.angus.mail.imap.IMAPFolder
+import org.eclipse.angus.mail.imap.IMAPStore
 import jakarta.mail.Flags
 import jakarta.mail.Folder
 import jakarta.mail.Session
 import jakarta.mail.UIDFolder
-import jakarta.mail.event.MessageChangedAdapter
+import jakarta.mail.event.MessageChangedListener
 import jakarta.mail.event.MessageChangedEvent
 import jakarta.mail.event.MessageCountAdapter
 import jakarta.mail.event.MessageCountEvent
@@ -103,7 +103,7 @@ class JakartaImapClient : ImapClient {
             RemoteFolder(
                 remoteName = folder.fullName,
                 displayName = decoded,
-                role = inferRole(folder, decoded),
+                role = inferRole(folder as IMAPFolder, decoded),
                 messageCount = messageCount,
                 unreadCount = unreadCount,
                 uidValidity = uidValidity,
@@ -179,7 +179,7 @@ class JakartaImapClient : ImapClient {
             jakarta.mail.Session.getInstance(Properties()),
             raw.inputStream(),
         )
-        message.flags = flags.toJakartaFlags()
+        message.setFlags(flags.toJakartaFlags(), true)
         val appendUids = folder.appendUIDMessages(arrayOf(message))
         appendUids?.firstOrNull()?.uid?.takeIf { it > 0 }
     }
@@ -254,7 +254,7 @@ class JakartaImapClient : ImapClient {
                         trySend(FolderEvent.MessageExpunged)
                     }
                 })
-                folder.addMessageChangedListener(object : MessageChangedAdapter() {
+                folder.addMessageChangedListener(object : MessageChangedListener {
                     override fun messageChanged(e: MessageChangedEvent) {
                         trySend(FolderEvent.FlagsChanged)
                     }
@@ -298,7 +298,7 @@ class JakartaImapClient : ImapClient {
         val profile = jakarta.mail.FetchProfile().apply {
             add(jakarta.mail.FetchProfile.Item.ENVELOPE)
             add(jakarta.mail.FetchProfile.Item.FLAGS)
-            add(jakarta.mail.FetchProfile.Item.INTERNALDATE)
+            add(IMAPFolder.FetchProfileItem.INTERNALDATE)
             add(jakarta.mail.FetchProfile.Item.SIZE)
             add(UIDFolder.FetchProfileItem.UID)
             add("Message-ID")
@@ -366,12 +366,12 @@ class JakartaImapClient : ImapClient {
             ?: emptyList()
 
     private fun Flags.toModelFlags(): Set<MessageFlag> = buildSet {
-        if (contains(Flags.Flag.SEEN)) add(MessageFlag.SEEN)
-        if (contains(Flags.Flag.ANSWERED)) add(MessageFlag.ANSWERED)
-        if (contains(Flags.Flag.FLAGGED)) add(MessageFlag.FLAGGED)
-        if (contains(Flags.Flag.DRAFT)) add(MessageFlag.DRAFT)
-        if (contains(Flags.Flag.DELETED)) add(MessageFlag.DELETED)
-        if (contains(Flags.Flag.RECENT)) add(MessageFlag.RECENT)
+        if (this@toModelFlags.contains(Flags.Flag.SEEN)) add(MessageFlag.SEEN)
+        if (this@toModelFlags.contains(Flags.Flag.ANSWERED)) add(MessageFlag.ANSWERED)
+        if (this@toModelFlags.contains(Flags.Flag.FLAGGED)) add(MessageFlag.FLAGGED)
+        if (this@toModelFlags.contains(Flags.Flag.DRAFT)) add(MessageFlag.DRAFT)
+        if (this@toModelFlags.contains(Flags.Flag.DELETED)) add(MessageFlag.DELETED)
+        if (this@toModelFlags.contains(Flags.Flag.RECENT)) add(MessageFlag.RECENT)
     }
 
     private fun Set<MessageFlag>.toJakartaFlags(): Flags {

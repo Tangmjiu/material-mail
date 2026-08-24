@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +56,8 @@ fun SettingsScreen(
     onOpenYolo: () -> Unit,
     /** Pro 功能入口槽（pro:app 壳注入；Community 版为空，物理上无 Pro 痕迹）。 */
     proEntries: List<ProEntry> = emptyList(),
+    /** Pro 状态横幅（pro:app 注入；Community 恒 null）。 */
+    proBanner: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,6 +81,9 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
         ) {
+            if (proBanner != null) {
+                item { proBanner() }
+            }
             item { SectionLabel("同步") }
             item {
                 Column(modifier = Modifier.padding(horizontal = MailTheme.spacing.lg)) {
@@ -156,6 +163,7 @@ fun SettingsScreen(
                     SettingsEntry(
                         title = entry.title + if (entry.locked) " · Pro" else "",
                         subtitle = entry.subtitle,
+                        locked = entry.locked,
                         onClick = entry.onClick,
                     )
                 }
@@ -274,7 +282,7 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun SettingsEntry(title: String, subtitle: String, onClick: () -> Unit) {
+private fun SettingsEntry(title: String, subtitle: String, locked: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,9 +299,17 @@ private fun SettingsEntry(title: String, subtitle: String, onClick: () -> Unit) 
             )
         }
         Icon(
-            Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            if (locked) {
+                Icons.Outlined.Lock
+            } else {
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight
+            },
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.outline,
+            tint = if (locked) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outline
+            },
         )
     }
 }

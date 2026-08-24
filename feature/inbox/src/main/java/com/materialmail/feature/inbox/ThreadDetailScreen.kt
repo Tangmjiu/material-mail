@@ -54,8 +54,8 @@ import com.materialmail.designsystem.theme.MailTypeScale
 fun ThreadDetailScreen(
     viewModel: ThreadDetailViewModel,
     threadId: String,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
     onBack: () -> Unit,
     onReply: (messageId: String) -> Unit,
     onReplyAll: (messageId: String) -> Unit,
@@ -90,12 +90,19 @@ fun ThreadDetailScreen(
         }
     }
 
-    with(sharedTransitionScope) {
-        Scaffold(
-            modifier = modifier.sharedElement(
-                rememberSharedContentState(key = "thread-container-$threadId"),
+    val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            modifier.sharedElement(
+                rememberSharedContentState(key = "thread-container-" + threadId),
                 animatedVisibilityScope = animatedVisibilityScope,
-            ),
+            )
+        }
+    } else {
+        modifier
+    }
+
+    Scaffold(
+            modifier = sharedModifier,
             snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
@@ -169,7 +176,6 @@ fun ThreadDetailScreen(
             }
         }
     }
-}
 
 @Composable
 private fun MessageBlock(

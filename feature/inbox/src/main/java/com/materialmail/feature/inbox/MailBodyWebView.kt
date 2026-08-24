@@ -24,6 +24,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 @Composable
 fun MailBodyWebView(
     html: String,
+    /** 用户主动点「显示远程图片」后才放行网络（防追踪像素，默认禁）。 */
+    allowRemoteImages: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     AndroidView(
@@ -33,8 +35,8 @@ fun MailBodyWebView(
                 settings.javaScriptEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
-                settings.blockNetworkLoads = true
-                settings.blockNetworkImage = true
+                settings.blockNetworkLoads = !allowRemoteImages
+                settings.blockNetworkImage = !allowRemoteImages
                 @Suppress("DEPRECATION")
                 settings.setSupportZoom(false)
                 webViewClient = object : WebViewClient() {
@@ -48,8 +50,8 @@ fun MailBodyWebView(
                         request: WebResourceRequest,
                     ): WebResourceResponse? {
                         val scheme = request.url.scheme?.lowercase()
-                        if (scheme == "http" || scheme == "https") {
-                            // 远程资源一律空响应（防追踪像素）
+                        if (!allowRemoteImages && (scheme == "http" || scheme == "https")) {
+                            // 未获用户许可：远程资源一律空响应（防追踪像素）
                             return WebResourceResponse("text/plain", "utf-8", null)
                         }
                         return super.shouldInterceptRequest(view, request)
@@ -58,6 +60,8 @@ fun MailBodyWebView(
             }
         },
         update = { webView ->
+            webView.settings.blockNetworkLoads = !allowRemoteImages
+            webView.settings.blockNetworkImage = !allowRemoteImages
             webView.loadDataWithBaseURL(null, wrapMailHtml(html), "text/html", "utf-8", null)
         },
     )

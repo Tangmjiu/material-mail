@@ -126,6 +126,23 @@ fun MaterialMailNavHost(
     SharedTransitionLayout {
         NavHost(navController = navController, startDestination = InboxRoutes.INBOX) {
             composable(InboxRoutes.INBOX) {
+                val windowWidthClass = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
+                    .windowSizeClass.windowWidthSizeClass
+                if (windowWidthClass == androidx.window.core.layout.WindowWidthSizeClass.EXPANDED) {
+                    TwoPaneHome(
+                        container = container,
+                        onManualRefresh = { SyncScheduler.syncNow(appContext) },
+                        onAddAccount = { navController.navigate(AccountRoutes.ADD_ACCOUNT) },
+                        onCompose = { navController.navigate(ComposerRoutes.new()) },
+                        onEditDraft = { navController.navigate(ComposerRoutes.editDraft(it)) },
+                        onSearch = { navController.navigate(InboxRoutes.SEARCH) },
+                        onOpenSettings = { navController.navigate(SettingsRoutes.SETTINGS) },
+                        onReply = { navController.navigate(ComposerRoutes.reply(it, false)) },
+                        onReplyAll = { navController.navigate(ComposerRoutes.reply(it, true)) },
+                        onForward = { navController.navigate(ComposerRoutes.forward(it)) },
+                    )
+                    return@composable
+                }
                 val viewModel: InboxViewModel = viewModel(
                     factory = InboxViewModel.factory(
                         database = container.database,

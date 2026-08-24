@@ -39,6 +39,7 @@ data class DetailMessageUi(
     /** null = 正在加载正文。 */
     val bodyText: String?,
     val isHtml: Boolean,
+    val remoteImagesAllowed: Boolean,
     val attachments: List<AttachmentUi>,
 )
 
@@ -68,6 +69,9 @@ class ThreadDetailViewModel(
     private val loadedAttachments =
         MutableStateFlow<Map<String, List<AttachmentUi>>>(emptyMap())
 
+    /** 用户逐封授权显示远程图片的邮件 id 集（默认禁止，防追踪像素）。 */
+    private val remoteImagesAllowedFor = MutableStateFlow<Set<String>>(emptySet())
+
     val events = MutableSharedFlow<ThreadDetailEvent>(extraBufferCapacity = 4)
 
     val uiState: StateFlow<ThreadDetailUiState> = combine(
@@ -75,7 +79,8 @@ class ThreadDetailViewModel(
         database.messageDao().observeByThread(threadId.value),
         loadedBodies,
         loadedAttachments,
-    ) { thread, messages, bodies, attachments ->
+        remoteImagesAllowedFor,
+    ) { thread, messages, bodies, attachments, remoteAllowed ->
         ThreadDetailUiState(
             subject = thread?.subject ?: "",
             loading = false,
@@ -93,6 +98,7 @@ class ThreadDetailViewModel(
                         else -> null
                     },
                     isHtml = body?.plainText == null && body?.html != null,
+                    remoteImagesAllowed = entity.id in remoteAllowed,
                     attachments = attachments[entity.id] ?: emptyList(),
                 )
             },
@@ -130,6 +136,10 @@ class ThreadDetailViewModel(
                 downloaded = entity.localUri != null,
             )
         })
+    }
+
+    fun enableRemoteImages(messageId: String) {
+        remoteImagesAllowedFor.value = remoteImagesAllowedFor.value + messageId
     }
 
     fun openAttachment(attachment: AttachmentUi) {

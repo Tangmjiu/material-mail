@@ -93,8 +93,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun InboxScreen(
     viewModel: InboxViewModel,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
     onOpenThread: (threadId: String) -> Unit,
     onAddAccount: () -> Unit,
     onCompose: () -> Unit,
@@ -386,8 +386,8 @@ private fun DrawerContent(
 private fun ThreadList(
     threads: List<InboxThreadUi>,
     viewModel: InboxViewModel,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
     onOpenThread: (threadId: String) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -433,30 +433,36 @@ private fun ThreadList(
                     }
                 },
             ) {
-                with(sharedTransitionScope) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surface)
-                            .sharedElement(
-                                rememberSharedContentState(
-                                    key = "thread-container-" + thread.threadId,
-                                ),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                            )
-                            .clickable { onOpenThread(thread.threadId) },
-                    ) {
-                        MailListItem(
-                            sender = thread.senderLine,
-                            subject = thread.subject,
-                            preview = thread.snippet,
-                            time = thread.timeText,
-                            unread = thread.unread,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .then(
+                            if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                                with(sharedTransitionScope) {
+                                    Modifier.sharedElement(
+                                        rememberSharedContentState(
+                                            key = "thread-container-" + thread.threadId,
+                                        ),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                    )
+                                }
+                            } else {
+                                Modifier
+                            },
                         )
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        )
-                    }
+                        .clickable { onOpenThread(thread.threadId) },
+                ) {
+                    MailListItem(
+                        sender = thread.senderLine,
+                        subject = thread.subject,
+                        preview = thread.snippet,
+                        time = thread.timeText,
+                        unread = thread.unread,
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    )
                 }
             }
         }

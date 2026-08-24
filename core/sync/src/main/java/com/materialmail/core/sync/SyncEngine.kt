@@ -68,6 +68,25 @@ class SyncEngine(
                 }
             }.distinctBy { it.threadId }
             accountDao.updateSyncState(accountId.value, SyncState.SYNCED.name)
+            // Capability Registry：事件分发给注册的监听器（Community 空列表，Pro automation 注册）
+            // 事件来自本次新增的 INBOX 消息实体（不是线程首条——那可能不是新邮件）
+            val summaries = newInboxMessageIds.mapNotNull { id ->
+                database.messageDao().getById(id)?.let { entity ->
+                    com.materialmail.core.capability.NewMailSummary(
+                        messageId = entity.id,
+                        threadId = entity.threadId,
+                        accountId = accountId.value,
+                        fromAddress = entity.fromAddress,
+                        fromName = com.materialmail.core.database.Converters
+                            .participantsFromJson(entity.fromJson).firstOrNull()?.name,
+                        subject = entity.subject,
+                        snippet = entity.snippet,
+                        hasAttachments = entity.hasAttachments,
+                        folderRole = FolderRole.INBOX.name,
+                    )
+                }
+            }
+            NewMailDispatcher.dispatch(summaries)
             SyncResult.Success(newCount, newMails)
         } catch (e: Exception) {
             accountDao.updateSyncState(accountId.value, SyncState.ERROR.name)

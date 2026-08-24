@@ -31,7 +31,8 @@ try {
 
     Write-Host "4. 推送到公开社区仓库"
     git remote add oss https://github.com/Tangmjiu/material-mail.git
-    git push oss main --force-with-lease
+    git push oss main --force
+    if ($LASTEXITCODE -ne 0) { throw "推送公开仓库失败（exit $LASTEXITCODE）" }
     Write-Host "完成。社区版已同步。"
 } finally {
     Pop-Location

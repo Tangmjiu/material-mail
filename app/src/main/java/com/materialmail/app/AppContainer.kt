@@ -18,6 +18,7 @@ import com.materialmail.core.sync.BodyLoader
 import com.materialmail.core.sync.MessageActionPerformer
 import com.materialmail.core.sync.MessageSender
 import com.materialmail.core.sync.SyncEngine
+import com.materialmail.core.sync.SyncSettingsStore
 
 /**
  * 手工 DI 容器（组装层职责）。引入 DI 框架与否是后续阶段的独立决策，
@@ -47,6 +48,7 @@ class AppContainer(context: Context) {
         MessageActionPerformer(database, credentialProvider)
     val messageSender: MessageSender = MessageSender(database, credentialProvider)
     val searchProvider: FtsSearchProvider = FtsSearchProvider(database)
+    val syncSettings: SyncSettingsStore = SyncSettingsStore(context)
 
     // ── Agent 地基（阶段 5）────────────────────────────
     // 确认卡片 UI 后续阶段接入；Gate 现在就位，任何 Agent 操作的唯一入口

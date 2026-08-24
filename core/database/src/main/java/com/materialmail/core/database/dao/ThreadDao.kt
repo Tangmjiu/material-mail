@@ -20,6 +20,15 @@ interface ThreadDao {
     )
     fun observeByAccount(accountId: String): Flow<List<ThreadEntity>>
 
+    /** 按文件夹查看：线程内至少一封消息在该文件夹。 */
+    @Query(
+        "SELECT DISTINCT t.* FROM threads t " +
+            "INNER JOIN messages m ON m.threadId = t.id " +
+            "WHERE m.folderId = :folderId " +
+            "ORDER BY t.lastMessageAtEpochMs DESC",
+    )
+    fun observeInFolder(folderId: String): Flow<List<ThreadEntity>>
+
     /**
      * 收件箱视图：只包含有消息位于 INBOX 文件夹的线程。
      * 归档（消息移出 INBOX）后线程自然从列表消失，Undo 移回即恢复。

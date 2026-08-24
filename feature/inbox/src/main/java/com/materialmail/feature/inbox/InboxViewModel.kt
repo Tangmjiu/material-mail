@@ -2,11 +2,14 @@ package com.materialmail.feature.inbox
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.lifecycle.viewModelScope
 import com.materialmail.core.database.MaterialMailDatabase
+import com.materialmail.core.database.entity.FolderEntity
 import com.materialmail.core.database.toModel
+import com.materialmail.core.model.Draft
+import com.materialmail.core.model.FolderRole
 import com.materialmail.core.model.SyncState
 import com.materialmail.core.model.Thread
 import com.materialmail.core.model.ThreadId
@@ -16,18 +19,19 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** 列表行的 UI 模型：从 Thread 领域模型映射，UI 不直接接触 Entity。 */
+/** 列表行的 UI 模型。 */
 data class InboxThreadUi(
     val threadId: String,
-    /** 参与者行：单人显示名字，多人合并展示。 */
     val senderLine: String,
     val subject: String,
     val snippet: String,
@@ -36,54 +40,135 @@ data class InboxThreadUi(
     val messageCount: Int,
 )
 
+/** 抽屉里的文件夹行。 */
+data class FolderUi(
+    val folderId: String,
+    val displayName: String,
+    val role: FolderRole,
+    val unreadCount: Int,
+)
+
+/** 本地草稿行。 */
+data class DraftUi(
+    val draftId: String,
+    val toLine: String,
+    val subject: String,
+    val timeText: String,
+)
+
+/** 当前查看目标：某个文件夹，或本地草稿箱。 */
+sealed interface InboxDestination {
+    data class FolderDest(val folderId: String, val displayName: String) : InboxDestination
+    data object Drafts : InboxDestination
+}
+
 sealed interface InboxUiState {
     data object Loading : InboxUiState
-
-    /** 还没有账户：账户引导在后续阶段，本阶段展示诚实的空态。 */
     data object NoAccount : InboxUiState
 
     data class Ready(
         val accountEmail: String,
         val syncing: Boolean,
+        val destination: InboxDestination,
+        val folders: List<FolderUi>,
         val threads: List<InboxThreadUi>,
+        val drafts: List<DraftUi>,
     ) : InboxUiState
 }
 
-/** 一次性 UI 事件（Snackbar）。 */
 sealed interface InboxEvent {
     data class Archived(val threadSubject: String) : InboxEvent
     data class Deleted(val threadSubject: String) : InboxEvent
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class InboxViewModel(
     private val database: MaterialMailDatabase,
     private val actionPerformer: MessageActionPerformer,
-    /** 手动刷新触发器（app 层注入 SyncScheduler.syncNow）。 */
     private val onManualRefresh: () -> Unit,
 ) : ViewModel() {
 
     private var lastMoveSnapshot: MessageActionPerformer.ThreadMoveSnapshot? = null
 
+    /** null = 跟随账户默认 INBOX。 */
+    private val selectedDestination = MutableStateFlow<InboxDestination?>(null)
+
     val events = MutableSharedFlow<InboxEvent>(extraBufferCapacity = 1)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<InboxUiState> = database.accountDao().observeAll()
         .flatMapLatest { accounts ->
             val account = accounts.firstOrNull()
                 ?: return@flatMapLatest flowOf(InboxUiState.NoAccount)
-            database.threadDao().observeInbox(account.id).map { entities ->
-                InboxUiState.Ready(
-                    accountEmail = account.email,
-                    syncing = account.syncState == SyncState.SYNCING.name,
-                    threads = entities.map { it.toModel().toUi() },
-                )
-            }
+            combine(
+                database.folderDao().observeByAccount(account.id),
+                database.draftDao().observeByAccount(account.id),
+                selectedDestination,
+            ) { folders, drafts, selected -> Triple(folders, drafts, selected) }
+                .flatMapLatest { (folders, drafts, selected) ->
+                    val folderEntities = folders.sortedBy { it.role }
+                    val destination = when (selected) {
+                        null -> folderEntities.firstOrNull { it.role == FolderRole.INBOX.name }
+                            ?.let { InboxDestination.FolderDest(it.id, it.displayName) }
+                        is InboxDestination.Drafts -> InboxDestination.Drafts
+                        is InboxDestination.FolderDest -> selected
+                    }
+                    if (destination == null) {
+                        return@flatMapLatest flowOf(
+                            readyState(account.email, account.syncState, folderEntities, drafts,
+                                InboxDestination.Drafts, emptyList()),
+                        )
+                    }
+                    when (destination) {
+                        InboxDestination.Drafts -> flowOf(
+                            readyState(account.email, account.syncState, folderEntities, drafts,
+                                InboxDestination.Drafts, emptyList()),
+                        )
+
+                        is InboxDestination.FolderDest ->
+                            database.threadDao().observeInFolder(destination.folderId)
+                                .map { entities ->
+                                    readyState(
+                                        account.email, account.syncState, folderEntities, drafts,
+                                        destination, entities.map { it.toModel().toUi() },
+                                    )
+                                }
+                    }
+                }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState.Loading)
 
+    private fun readyState(
+        email: String,
+        syncState: String,
+        folders: List<FolderEntity>,
+        drafts: List<com.materialmail.core.database.entity.DraftEntity>,
+        destination: InboxDestination,
+        threads: List<InboxThreadUi>,
+    ) = InboxUiState.Ready(
+        accountEmail = email,
+        syncing = syncState == SyncState.SYNCING.name,
+        destination = destination,
+        folders = folders.map {
+            FolderUi(it.id, it.displayName, FolderRole.valueOf(it.role), it.unreadCount)
+        },
+        threads = threads,
+        drafts = drafts.map { it.toModel().toUi() },
+    )
+
+    fun selectFolder(folderId: String, displayName: String) {
+        selectedDestination.value = InboxDestination.FolderDest(folderId, displayName)
+    }
+
+    fun selectDrafts() {
+        selectedDestination.value = InboxDestination.Drafts
+    }
+
+    fun deleteDraft(draftId: String) {
+        viewModelScope.launch { database.draftDao().deleteById(draftId) }
+    }
+
     fun refresh() = onManualRefresh()
 
-    /** 滑动归档：本地乐观更新，Undo 窗口内可撤销。 */
     fun archiveThread(threadId: String, subject: String) {
         viewModelScope.launch {
             val snapshot = actionPerformer.archiveThread(ThreadId(threadId))
@@ -94,7 +179,6 @@ class InboxViewModel(
         }
     }
 
-    /** 滑动删除：移入垃圾箱（非永久删除），同样可 Undo。 */
     fun deleteThread(threadId: String, subject: String) {
         viewModelScope.launch {
             val snapshot = actionPerformer.deleteThread(ThreadId(threadId))
@@ -129,6 +213,13 @@ class InboxViewModel(
         )
     }
 
+    private fun Draft.toUi(): DraftUi = DraftUi(
+        draftId = id.value,
+        toLine = to.firstOrNull()?.address ?: "（无收件人）",
+        subject = subject.ifBlank { "（无主题）" },
+        timeText = formatListTime(updatedAt),
+    )
+
     companion object {
         fun factory(
             database: MaterialMailDatabase,
@@ -137,9 +228,7 @@ class InboxViewModel(
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer { InboxViewModel(database, actionPerformer, onManualRefresh) }
         }
-    }
 
-    private companion object {
         fun formatListTime(instant: Instant): String {
             val zone = ZoneId.systemDefault()
             val time = instant.atZone(zone)

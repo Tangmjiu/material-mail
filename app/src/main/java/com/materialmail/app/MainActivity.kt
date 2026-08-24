@@ -32,6 +32,13 @@ import com.materialmail.feature.composer.ComposeMode
 import com.materialmail.feature.composer.ComposerRoutes
 import com.materialmail.feature.composer.ComposerScreen
 import com.materialmail.feature.composer.ComposerViewModel
+import com.materialmail.feature.settings.ActionLogScreen
+import com.materialmail.feature.settings.ActionLogViewModel
+import com.materialmail.feature.settings.AgentPermissionsScreen
+import com.materialmail.feature.settings.AgentPermissionsViewModel
+import com.materialmail.feature.settings.SettingsRoutes
+import com.materialmail.feature.settings.SettingsScreen
+import com.materialmail.feature.settings.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +83,38 @@ fun MaterialMailNavHost(
                     onAddAccount = { navController.navigate(AccountRoutes.ADD_ACCOUNT) },
                     onCompose = { navController.navigate(ComposerRoutes.new()) },
                     onSearch = { navController.navigate(InboxRoutes.SEARCH) },
+                    onEditDraft = { draftId ->
+                        navController.navigate(ComposerRoutes.editDraft(draftId))
+                    },
+                    onOpenSettings = { navController.navigate(SettingsRoutes.SETTINGS) },
+                )
+            }
+            composable(SettingsRoutes.SETTINGS) {
+                val viewModel: SettingsViewModel = viewModel(
+                    factory = SettingsViewModel.factory(container.syncSettings),
+                )
+                SettingsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenActionLog = { navController.navigate(SettingsRoutes.ACTION_LOG) },
+                    onOpenAgentPermissions = {
+                        navController.navigate(SettingsRoutes.AGENT_PERMISSIONS)
+                    },
+                )
+            }
+            composable(SettingsRoutes.ACTION_LOG) {
+                val viewModel: ActionLogViewModel = viewModel(
+                    factory = ActionLogViewModel.factory(container.actionLogReader),
+                )
+                ActionLogScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+            }
+            composable(SettingsRoutes.AGENT_PERMISSIONS) {
+                val viewModel: AgentPermissionsViewModel = viewModel(
+                    factory = AgentPermissionsViewModel.factory(container.agentPermissionStore),
+                )
+                AgentPermissionsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(InboxRoutes.SEARCH) {

@@ -52,6 +52,22 @@ object SyncScheduler {
         )
     }
 
+    /** 变更周期（用户改设置）：取消重排。 */
+    fun reschedule(context: Context, intervalMinutes: Long) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val request = PeriodicWorkRequestBuilder<SyncWorker>(
+            intervalMinutes.coerceAtLeast(MIN_INTERVAL_MINUTES),
+            TimeUnit.MINUTES,
+        ).setConstraints(constraints).build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            PERIODIC_WORK_NAME,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+            request,
+        )
+    }
+
     fun cancelPeriodic(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK_NAME)
     }

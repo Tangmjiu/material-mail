@@ -39,6 +39,8 @@ import com.materialmail.feature.settings.AgentPermissionsViewModel
 import com.materialmail.feature.settings.SettingsRoutes
 import com.materialmail.feature.settings.SettingsScreen
 import com.materialmail.feature.settings.SettingsViewModel
+import com.materialmail.region.ui.RegionSettingsScreen
+import com.materialmail.region.ui.RegionSettingsViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +107,19 @@ fun MaterialMailNavHost(
                     onOpenAgentPermissions = {
                         navController.navigate(SettingsRoutes.AGENT_PERMISSIONS)
                     },
+                    onOpenRegion = { navController.navigate(SettingsRoutes.REGION) },
+                )
+            }
+            composable(SettingsRoutes.REGION) {
+                val viewModel: RegionSettingsViewModel = viewModel(
+                    factory = RegionSettingsViewModel.factory(
+                        detector = container.regionDetector,
+                        noticeStore = container.regionNoticeStore,
+                    ),
+                )
+                RegionSettingsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(SettingsRoutes.ACTION_LOG) {

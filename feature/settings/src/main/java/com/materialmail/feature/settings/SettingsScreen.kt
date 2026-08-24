@@ -42,6 +42,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenActionLog: () -> Unit,
     onOpenAgentPermissions: () -> Unit,
+    onOpenRegion: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,6 +117,16 @@ fun SettingsScreen(
                     title = "操作记录",
                     subtitle = "Agent 每次执行的完整审计日志",
                     onClick = onOpenActionLog,
+                )
+            }
+            item { DividerItem() }
+
+            item { SectionLabel("隐私") }
+            item {
+                SettingsEntry(
+                    title = "地区与服务可用性",
+                    subtitle = "地区检测状态、手动覆盖、提示管理",
+                    onClick = onOpenRegion,
                 )
             }
             item { DividerItem() }

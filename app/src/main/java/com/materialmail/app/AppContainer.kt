@@ -3,6 +3,9 @@ package com.materialmail.app
 import android.content.Context
 import com.materialmail.core.crypto.CredentialStore
 import com.materialmail.agent.audit.ActionLogReader
+import com.materialmail.region.availability.RegionAvailabilityChecker
+import com.materialmail.region.detection.RegionDetector
+import com.materialmail.region.ui.RegionNoticeStore
 import com.materialmail.agent.audit.ActionLogWriter
 import com.materialmail.agent.execution.ConfirmationGate
 import com.materialmail.agent.execution.ConfirmationTokenIssuer
@@ -63,4 +66,11 @@ class AppContainer(context: Context) {
         tokenIssuer = ConfirmationTokenIssuer(),
         audit = actionLogWriter,
     )
+
+    // ── Region（自包含模块，可整体摘除）─────────────────────
+    val regionDetector = com.materialmail.region.detection.RegionDetector(context)
+    val regionNoticeStore = RegionNoticeStore(context)
+    /** Core 契约的真实实现：region 存在时替换 AllowAll 默认实现。 */
+    val availabilityChecker: com.materialmail.core.capability.ServiceAvailabilityChecker =
+        RegionAvailabilityChecker(regionDetector)
 }

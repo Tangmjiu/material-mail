@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":core:crypto"))
     implementation(project(":core:search"))
     implementation(project(":agent"))
+    implementation(project(":region"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

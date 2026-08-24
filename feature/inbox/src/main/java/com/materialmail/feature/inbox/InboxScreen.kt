@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -73,6 +74,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -490,23 +492,39 @@ private fun DraftList(
 
 @Composable
 private fun NoAccountState(onAddAccount: () -> Unit, modifier: Modifier = Modifier) {
+    // 首启欢迎页：品牌 hero + 价值观 + 唯一 CTA（MD3E 大圆角 + spring 入场）
+    val heroScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+        label = "heroPop")
     Column(
         modifier = modifier.padding(MailTheme.spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
-        Icon(
-            Icons.Outlined.Inbox,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.outline)
+        Box(
+            modifier = Modifier
+                .size(112.dp)
+                .graphicsLayer { scaleX = heroScale; scaleY = heroScale }
+                .background(
+                    MaterialTheme.colorScheme.primaryContainer,
+                    MaterialTheme.shapes.extraLarge),
+            contentAlignment = Alignment.Center) {
+            Icon(
+                Icons.Outlined.MailOutline,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
         Spacer(Modifier.height(MailTheme.spacing.xl))
         Text(
-            "还没有邮箱账户",
-            style = MaterialTheme.typography.headlineMedium,
+            "Material Mail",
+            style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(MailTheme.spacing.sm))
         Text(
-            "添加账户后即可离线收件。支持 Gmail / QQ / 163 / Outlook 预设与任意 IMAP 服务器。",
+            "Local-first 邮箱：邮件存在你的设备上，不上传、不分析。\n支持 Gmail / QQ / 163 / Outlook 与任意 IMAP 服务器。",
             style = MailTypeScale.preview,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center)

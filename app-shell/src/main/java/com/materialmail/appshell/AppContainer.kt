@@ -78,6 +78,10 @@ class AppContainer(context: Context) {
         yolo = yoloSessionManager,
     )
 
+    // ── Agent 模型接入（OpenAI 兼容；Key 走 Keystore 加密）──────────
+    val modelConfigStore = com.materialmail.agent.model.ModelConfigStore(context, credentialStore)
+    val modelClient = com.materialmail.agent.model.ModelClient()
+
     // ── Region（自包含模块，可整体摘除）─────────────────────
     val regionDetector = com.materialmail.region.detection.RegionDetector(context)
     val regionNoticeStore = RegionNoticeStore(context)

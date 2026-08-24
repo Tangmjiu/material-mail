@@ -117,7 +117,7 @@ class InboxViewModel(
                     val folderEntities = folders.sortedBy { it.role }
                     val destination = when (selected) {
                         null -> folderEntities.firstOrNull { it.role == FolderRole.INBOX.name }
-                            ?.let { InboxDestination.FolderDest(it.id, it.displayName) }
+                            ?.let { InboxDestination.FolderDest(it.id, localizedFolderName(FolderRole.valueOf(it.role), it.displayName)) }
                         is InboxDestination.Drafts -> InboxDestination.Drafts
                         is InboxDestination.FolderDest -> selected
                     }
@@ -163,7 +163,7 @@ class InboxViewModel(
         syncing = syncState == SyncState.SYNCING.name,
         destination = destination,
         folders = folders.map {
-            FolderUi(it.id, it.displayName, FolderRole.valueOf(it.role), it.unreadCount)
+            FolderUi(it.id, localizedFolderName(FolderRole.valueOf(it.role), it.displayName), FolderRole.valueOf(it.role), it.unreadCount)
         },
         threads = threads,
         drafts = drafts.map { it.toModel().toUi() },
@@ -263,4 +263,16 @@ class InboxViewModel(
             }
         }
     }
+}
+/**
+ * 角色优先的文件夹中文名（修复“INBOX/Sent 直接裸露”的汉化缺口）：
+ * 标准角色一律中文；服务器返回的中文名（QQ/163）与自定义文件夹保留原名。
+ */
+internal fun localizedFolderName(role: FolderRole, serverName: String): String = when (role) {
+    FolderRole.INBOX -> "收件箱"
+    FolderRole.SENT -> "已发送"
+    FolderRole.DRAFTS -> "草稿箱"
+    FolderRole.TRASH -> "已删除"
+    FolderRole.ARCHIVE -> "归档"
+    FolderRole.CUSTOM -> serverName
 }

@@ -18,7 +18,7 @@ android {
     namespace = "com.materialmail.app"
 
     defaultConfig {
-        applicationId = "com.materialmail"
+        applicationId = "com.materialmail.community"
     }
 }
 

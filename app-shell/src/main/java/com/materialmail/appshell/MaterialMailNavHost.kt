@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.materialmail.appshell
 
 import android.os.Bundle
@@ -80,7 +82,25 @@ fun MaterialMailNavHost(
         )
     }
     SharedTransitionLayout {
-        NavHost(navController = navController, startDestination = InboxRoutes.INBOX) {
+        val motionScheme = com.materialmail.designsystem.theme.MailTheme.motionScheme
+        NavHost(
+            navController = navController,
+            startDestination = InboxRoutes.INBOX,
+            // MD3E 默认转场：淡入 + 轻微缩放的 fade-through，spring 物理（不生硬）；
+            // 详情页另由容器变换接管，与此叠加不冲突
+            enterTransition = {
+                androidx.compose.animation.fadeIn(motionScheme.defaultEffectsSpec()) +
+                    androidx.compose.animation.scaleIn(
+                        motionScheme.defaultSpatialSpec(), initialScale = 0.96f)
+            },
+            exitTransition = { androidx.compose.animation.fadeOut(motionScheme.defaultEffectsSpec()) },
+            popEnterTransition = {
+                androidx.compose.animation.fadeIn(motionScheme.defaultEffectsSpec()) +
+                    androidx.compose.animation.scaleIn(
+                        motionScheme.defaultSpatialSpec(), initialScale = 0.96f)
+            },
+            popExitTransition = { androidx.compose.animation.fadeOut(motionScheme.defaultEffectsSpec()) },
+        ) {
             composable(InboxRoutes.INBOX) {
                 val windowWidthClass = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
                     .windowSizeClass.windowWidthSizeClass
@@ -137,6 +157,8 @@ fun MaterialMailNavHost(
                     proBanner = proBanner,
                     onBack = { navController.popBackStack() },
                     onOpenActionLog = { navController.navigate(SettingsRoutes.ACTION_LOG) },
+                    onOpenAgentModel = { navController.navigate(SettingsRoutes.AGENT_MODEL) },
+                    onOpenAgentChat = { navController.navigate(SettingsRoutes.AGENT_CHAT) },
                     onOpenAgentPermissions = {
                         navController.navigate(SettingsRoutes.AGENT_PERMISSIONS)
                     },
@@ -174,6 +196,29 @@ fun MaterialMailNavHost(
                     factory = ActionLogViewModel.factory(container.actionLogReader),
                 )
                 ActionLogScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+            }
+            composable(SettingsRoutes.AGENT_MODEL) {
+                val viewModel: com.materialmail.feature.settings.agent.AgentModelViewModel = viewModel(
+                    factory = com.materialmail.feature.settings.agent.AgentModelViewModel.factory(
+                        container.modelConfigStore, container.modelClient,
+                    ),
+                )
+                com.materialmail.feature.settings.agent.AgentModelScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(SettingsRoutes.AGENT_CHAT) {
+                val viewModel: com.materialmail.feature.settings.agent.AgentChatViewModel = viewModel(
+                    factory = com.materialmail.feature.settings.agent.AgentChatViewModel.factory(
+                        container.modelConfigStore, container.modelClient, container.database,
+                    ),
+                )
+                com.materialmail.feature.settings.agent.AgentChatScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onConfigureModel = { navController.navigate(SettingsRoutes.AGENT_MODEL) },
+                )
             }
             composable(SettingsRoutes.AGENT_PERMISSIONS) {
                 val viewModel: AgentPermissionsViewModel = viewModel(

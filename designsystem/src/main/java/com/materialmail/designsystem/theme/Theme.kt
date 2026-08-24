@@ -44,10 +44,8 @@ fun MaterialMailTheme(
         else -> LightScheme
     }
     val colorScheme = if (primaryOverride != null) {
-        baseScheme.copy(
-            primary = primaryOverride,
-            primaryContainer = primaryOverride.copy(alpha = 0.2f),
-        )
+        // 完整 tonal 派生（不再是只换两个槽位的半成品）
+        seedColorScheme(baseScheme, primaryOverride, darkTheme)
     } else {
         baseScheme
     }

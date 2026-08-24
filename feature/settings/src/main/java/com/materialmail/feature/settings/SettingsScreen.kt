@@ -51,6 +51,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
     onOpenActionLog: () -> Unit,
+    onOpenAgentModel: () -> Unit,
+    onOpenAgentChat: () -> Unit,
     onOpenAgentPermissions: () -> Unit,
     onOpenRegion: () -> Unit,
     onOpenYolo: () -> Unit,
@@ -123,6 +125,20 @@ fun SettingsScreen(
             item { DividerItem() }
 
             item { SectionLabel("Agent") }
+            item {
+                SettingsEntry(
+                    title = "AI 模型",
+                    subtitle = "OpenAI 兼容端点：DeepSeek / 通义 / Kimi / 智谱 / 自定义",
+                    onClick = onOpenAgentModel,
+                )
+            }
+            item {
+                SettingsEntry(
+                    title = "Agent 对话",
+                    subtitle = "用自然语言查询邮箱（只读工具，写操作仍需确认）",
+                    onClick = onOpenAgentChat,
+                )
+            }
             item {
                 SettingsEntry(
                     title = "Agent 权限",

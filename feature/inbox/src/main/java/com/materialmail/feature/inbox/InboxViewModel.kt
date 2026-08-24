@@ -67,7 +67,10 @@ sealed interface InboxUiState {
     data object NoAccount : InboxUiState
 
     data class Ready(
+        val accountId: String,
         val accountEmail: String,
+        /** 全部账户（抽屉切换器用）：accountId -> email。 */
+        val accounts: List<Pair<String, String>>,
         val syncing: Boolean,
         val destination: InboxDestination,
         val folders: List<FolderUi>,
@@ -93,11 +96,16 @@ class InboxViewModel(
     /** null = 跟随账户默认 INBOX。 */
     private val selectedDestination = MutableStateFlow<InboxDestination?>(null)
 
+    /** null = 第一个账户。 */
+    private val selectedAccountId = MutableStateFlow<String?>(null)
+
     val events = MutableSharedFlow<InboxEvent>(extraBufferCapacity = 1)
 
     val uiState: StateFlow<InboxUiState> = database.accountDao().observeAll()
         .flatMapLatest { accounts ->
-            val account = accounts.firstOrNull()
+            val account = accounts.firstOrNull {
+                it.id == selectedAccountId.value
+            } ?: accounts.firstOrNull()
                 ?: return@flatMapLatest flowOf(InboxUiState.NoAccount)
             combine(
                 database.folderDao().observeByAccount(account.id),
@@ -105,6 +113,7 @@ class InboxViewModel(
                 selectedDestination,
             ) { folders, drafts, selected -> Triple(folders, drafts, selected) }
                 .flatMapLatest { (folders, drafts, selected) ->
+                    val allAccounts = accounts.map { it.id to it.email }
                     val folderEntities = folders.sortedBy { it.role }
                     val destination = when (selected) {
                         null -> folderEntities.firstOrNull { it.role == FolderRole.INBOX.name }
@@ -114,21 +123,22 @@ class InboxViewModel(
                     }
                     if (destination == null) {
                         return@flatMapLatest flowOf(
-                            readyState(account.email, account.syncState, folderEntities, drafts,
-                                InboxDestination.Drafts, emptyList()),
+                            readyState(account.id, account.email, allAccounts, account.syncState,
+                                folderEntities, drafts, InboxDestination.Drafts, emptyList()),
                         )
                     }
                     when (destination) {
                         InboxDestination.Drafts -> flowOf(
-                            readyState(account.email, account.syncState, folderEntities, drafts,
-                                InboxDestination.Drafts, emptyList()),
+                            readyState(account.id, account.email, allAccounts, account.syncState,
+                                folderEntities, drafts, InboxDestination.Drafts, emptyList()),
                         )
 
                         is InboxDestination.FolderDest ->
                             database.threadDao().observeInFolder(destination.folderId)
                                 .map { entities ->
                                     readyState(
-                                        account.email, account.syncState, folderEntities, drafts,
+                                        account.id, account.email, allAccounts, account.syncState,
+                                        folderEntities, drafts,
                                         destination, entities.map { it.toModel().toUi() },
                                     )
                                 }
@@ -138,14 +148,18 @@ class InboxViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState.Loading)
 
     private fun readyState(
+        accountId: String,
         email: String,
+        accounts: List<Pair<String, String>>,
         syncState: String,
         folders: List<FolderEntity>,
         drafts: List<com.materialmail.core.database.entity.DraftEntity>,
         destination: InboxDestination,
         threads: List<InboxThreadUi>,
     ) = InboxUiState.Ready(
+        accountId = accountId,
         accountEmail = email,
+        accounts = accounts,
         syncing = syncState == SyncState.SYNCING.name,
         destination = destination,
         folders = folders.map {
@@ -154,6 +168,12 @@ class InboxViewModel(
         threads = threads,
         drafts = drafts.map { it.toModel().toUi() },
     )
+
+    /** 切换账户：重置文件夹选择到新账户的 INBOX。 */
+    fun selectAccount(accountId: String) {
+        selectedAccountId.value = accountId
+        selectedDestination.value = null
+    }
 
     fun selectFolder(folderId: String, displayName: String) {
         selectedDestination.value = InboxDestination.FolderDest(folderId, displayName)

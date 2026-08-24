@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -22,6 +23,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -134,6 +136,49 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AccountRow(account: AccountManageUi, onDelete: () -> Unit) {
+    var showConfirm by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MailTheme.spacing.lg, vertical = MailTheme.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            account.email,
+            style = MailTypeScale.subject,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = { showConfirm = true }) {
+            Text("删除", style = MailTypeScale.meta, color = MaterialTheme.colorScheme.error)
+        }
+    }
+    if (showConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("删除账户？") },
+            text = {
+                Text(
+                    "将删除 " + account.email + " 及其全部本地邮件、草稿和凭据。" +
+                        "服务器上的邮件不受影响。",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showConfirm = false; onDelete() }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text("取消") }
+            },
+        )
     }
 }
 

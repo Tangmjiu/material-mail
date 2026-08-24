@@ -138,6 +138,9 @@ fun InboxScreen(
                 (uiState as? InboxUiState.Ready)?.let { state ->
                     DrawerContent(
                         state = state,
+                        onSelectAccount = { accountId ->
+                            viewModel.selectAccount(accountId)
+                        },
                         onSelectFolder = { folder ->
                             viewModel.selectFolder(folder.folderId, folder.displayName)
                             scope.launch { drawerState.close() }
@@ -282,6 +285,7 @@ private fun inboxTitle(state: InboxUiState): String = when (val s = state) {
 @Composable
 private fun DrawerContent(
     state: InboxUiState.Ready,
+    onSelectAccount: (String) -> Unit,
     onSelectFolder: (FolderUi) -> Unit,
     onSelectDrafts: () -> Unit,
     onAddAccount: () -> Unit,
@@ -298,6 +302,25 @@ private fun DrawerContent(
             style = MailTypeScale.meta,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+    // 多账户切换（设计 MVP P1）
+    if (state.accounts.size > 1) {
+        state.accounts.forEach { (accountId, email) ->
+            if (accountId != state.accountId) {
+                Text(
+                    email,
+                    style = MailTypeScale.preview,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectAccount(accountId) }
+                        .padding(
+                            horizontal = MailTheme.spacing.lg,
+                            vertical = MailTheme.spacing.sm,
+                        ),
+                )
+            }
+        }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
 

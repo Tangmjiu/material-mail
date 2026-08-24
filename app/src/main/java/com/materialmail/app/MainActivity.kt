@@ -91,7 +91,12 @@ fun MaterialMailNavHost(
             }
             composable(SettingsRoutes.SETTINGS) {
                 val viewModel: SettingsViewModel = viewModel(
-                    factory = SettingsViewModel.factory(container.syncSettings),
+                    factory = SettingsViewModel.factory(
+                        syncSettings = container.syncSettings,
+                        database = container.database,
+                        credentialStore = container.credentialStore,
+                        bodyStore = container.bodyStore,
+                    ),
                 )
                 SettingsScreen(
                     viewModel = viewModel,

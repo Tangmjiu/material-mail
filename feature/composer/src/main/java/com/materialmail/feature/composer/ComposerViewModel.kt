@@ -17,6 +17,7 @@ import com.materialmail.core.model.Draft
 import com.materialmail.core.model.DraftId
 import com.materialmail.core.model.MessageId
 import com.materialmail.core.model.Participant
+import com.materialmail.core.search.ContactSuggester
 import com.materialmail.core.sync.BodyLoader
 import com.materialmail.core.sync.MessageSender
 import java.time.Instant
@@ -48,6 +49,8 @@ data class ComposerUiState(
     /** 表单尚未初始化完成（预填进行中）。 */
     val initializing: Boolean = true,
     val attachments: List<OutgoingAttachment> = emptyList(),
+    /** 收件人联想建议（输入 ≥2 字符时出现）。 */
+    val suggestions: List<Participant> = emptyList(),
 )
 
 sealed interface ComposerEvent {
@@ -62,6 +65,7 @@ class ComposerViewModel(
     private val database: MaterialMailDatabase,
     private val messageSender: MessageSender,
     private val bodyLoader: BodyLoader,
+    private val contactSuggester: ContactSuggester,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ComposerUiState())
@@ -93,6 +97,20 @@ class ComposerViewModel(
         when {
             draftId != null -> loadDraft(draftId)
             replyToMessageId != null -> prefillFromOriginal(account.email)
+        }
+        // 签名：新邮件追加在末尾；回复/转发时插在引用之前（" -- " 是签名分隔惯例）
+        account.signature?.takeIf { it.isNotBlank() }?.let { signature ->
+            if (draftId == null) {
+                _uiState.update { state ->
+                    val sigBlock = "\n\n-- \n" + signature
+                    val body = if (replyToMessageId != null && state.body.startsWith("\n\n在 ")) {
+                        sigBlock + "\n" + state.body
+                    } else {
+                        state.body + sigBlock
+                    }
+                    state.copy(body = body)
+                }
+            }
         }
         _uiState.update { it.copy(initializing = false) }
     }
@@ -171,7 +189,26 @@ class ComposerViewModel(
 
     // ── 字段变更 ─────────────────────────────────────────────
 
-    fun onToChanged(v: String) = _uiState.update { it.copy(to = v) }
+    fun onToChanged(v: String) {
+        _uiState.update { it.copy(to = v) }
+        viewModelScope.launch {
+            // 联想当前正在输入的最后一个地址片段
+            val fragment = v.split(',', ';', '，', '；').last().trim()
+            val suggestions = contactSuggester.suggest(fragment)
+                .filter { s -> !v.split(',', ';', '，', '；').map { it.trim() }.contains(s.address) }
+            _uiState.update { it.copy(suggestions = suggestions) }
+        }
+    }
+
+    fun applySuggestion(participant: Participant) {
+        _uiState.update { state ->
+            val parts = state.to.split(',', ';', '，', '；').dropLast(1)
+            state.copy(
+                to = (parts + participant.address).joinToString(", ") { it.trim() } + ", ",
+                suggestions = emptyList(),
+            )
+        }
+    }
     fun onCcChanged(v: String) = _uiState.update { it.copy(cc = v) }
     fun onBccChanged(v: String) = _uiState.update { it.copy(bcc = v) }
     fun onToggleCcBcc() = _uiState.update { it.copy(showCcBcc = !it.showCcBcc) }
@@ -309,9 +346,13 @@ class ComposerViewModel(
             database: MaterialMailDatabase,
             messageSender: MessageSender,
             bodyLoader: BodyLoader,
+            contactSuggester: ContactSuggester,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                ComposerViewModel(draftId, replyToMessageId, mode, database, messageSender, bodyLoader)
+                ComposerViewModel(
+                    draftId, replyToMessageId, mode, database, messageSender, bodyLoader,
+                    contactSuggester,
+                )
             }
         }
     }

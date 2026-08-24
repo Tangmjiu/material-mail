@@ -3,6 +3,7 @@ package com.materialmail.feature.composer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -171,6 +172,27 @@ fun ComposerScreen(
                 label = "收件人",
                 keyboardType = KeyboardType.Email,
             )
+            // 收件人联想（本地数据，零权限零网络）
+            uiState.suggestions.forEach { suggestion ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.applySuggestion(suggestion) }
+                        .padding(vertical = MailTheme.spacing.sm),
+                ) {
+                    Text(
+                        suggestion.displayName,
+                        style = MailTypeScale.subject,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.width(MailTheme.spacing.sm))
+                    Text(
+                        suggestion.address,
+                        style = MailTypeScale.meta,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.surfaceContainerHigh)
                 if (!uiState.showCcBcc) {

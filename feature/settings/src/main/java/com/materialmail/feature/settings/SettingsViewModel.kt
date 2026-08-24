@@ -51,6 +51,12 @@ class SettingsViewModel(
      * 删除账户：Room 级联删 folders/messages/threads/attachments/drafts/labels，
      * 另外两处手动清理 —— Keystore 加密的凭据、磁盘上的正文文件。
      */
+    fun updateSignature(accountId: String, signature: String?) {
+        viewModelScope.launch {
+            database.accountDao().updateSignature(accountId, signature?.takeIf { s -> s.isNotBlank() })
+        }
+    }
+
     fun deleteAccount(accountId: String) {
         viewModelScope.launch {
             database.accountDao().getById(accountId)?.let { database.accountDao().delete(it) }

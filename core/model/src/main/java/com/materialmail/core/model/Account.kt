@@ -30,5 +30,7 @@ data class Account(
     val imap: ServerEndpoint,
     val smtp: ServerEndpoint,
     val syncState: SyncState,
+    /** 签名：纯文本，写信时自动附加在正文末尾（" -- " 分隔符惯例）。 */
+    val signature: String? = null,
     val createdAt: Instant,
 )

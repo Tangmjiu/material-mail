@@ -13,6 +13,7 @@ import com.materialmail.agent.permissions.AgentPermissionStore
 import com.materialmail.agent.yolo.YoloCapabilityStore
 import com.materialmail.agent.yolo.YoloSessionManager
 import com.materialmail.agent.yolo.YoloStatusNotifier
+import com.materialmail.core.search.ContactSuggester
 import com.materialmail.core.search.FtsSearchProvider
 import com.materialmail.core.crypto.StoredCredential
 import com.materialmail.core.database.BodyStore
@@ -57,6 +58,7 @@ class AppContainer(context: Context) {
     val attachmentDownloader: AttachmentDownloader =
         AttachmentDownloader(context, database, credentialProvider)
     val searchProvider: FtsSearchProvider = FtsSearchProvider(database)
+    val contactSuggester: ContactSuggester = ContactSuggester(database)
     val syncSettings: SyncSettingsStore = SyncSettingsStore(context)
 
     // ── Agent 地基（阶段 5）────────────────────────────

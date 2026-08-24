@@ -23,4 +23,7 @@ interface AccountDao {
 
     @Query("UPDATE accounts SET syncState = :syncState WHERE id = :id")
     suspend fun updateSyncState(id: String, syncState: String)
+
+    @Query("UPDATE accounts SET signature = :signature WHERE id = :id")
+    suspend fun updateSignature(id: String, signature: String?)
 }

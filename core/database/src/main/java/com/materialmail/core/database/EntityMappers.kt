@@ -48,6 +48,7 @@ fun Account.toEntity(): AccountEntity = AccountEntity(
     smtpPort = smtp.port,
     smtpEncryption = smtp.encryption.name,
     syncState = syncState.name,
+    signature = signature,
     createdAtEpochMs = createdAt.toEpochMs(),
 )
 
@@ -59,6 +60,7 @@ fun AccountEntity.toModel(): Account = Account(
     imap = ServerEndpoint(imapHost, imapPort, Encryption.valueOf(imapEncryption)),
     smtp = ServerEndpoint(smtpHost, smtpPort, Encryption.valueOf(smtpEncryption)),
     syncState = SyncState.valueOf(syncState),
+    signature = signature,
     createdAt = createdAtEpochMs.toInstant(),
 )
 

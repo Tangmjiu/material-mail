@@ -16,5 +16,7 @@ data class AccountEntity(
     val smtpPort: Int,
     val smtpEncryption: String,
     val syncState: String,
+    /** 账户签名（纯文本，Composer 自动附加）。 */
+    val signature: String? = null,
     val createdAtEpochMs: Long,
 )

@@ -53,6 +53,13 @@ interface MessageDao {
     @Query("UPDATE messages SET threadId = :threadId WHERE id = :id")
     suspend fun updateThreadId(id: String, threadId: String)
 
+    /** 收件人联想：从发件记录中提取去重联系人。 */
+    @Query(
+        "SELECT DISTINCT fromAddress, fromJson FROM messages " +
+            "WHERE fromAddress LIKE :prefix || '%' ORDER BY sentAtEpochMs DESC LIMIT :limit",
+    )
+    suspend fun suggestContacts(prefix: String, limit: Int): List<ContactSuggestion>
+
     /** UIDVALIDITY 变化时整文件夹重建。 */
     @Query("DELETE FROM messages WHERE folderId = :folderId")
     suspend fun deleteByFolder(folderId: String)

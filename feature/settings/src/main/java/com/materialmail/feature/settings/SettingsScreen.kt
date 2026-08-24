@@ -159,9 +159,19 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun AccountRow(account: AccountManageUi, onDelete: () -> Unit) {
+private fun AccountRow(
+    account: AccountManageUi,
+    onDelete: () -> Unit,
+    onUpdateSignature: (String?) -> Unit,
+) {
     var showConfirm by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(false)
+    }
+    var showSignature by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    var signatureText by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf("")
     }
     Row(
         modifier = Modifier
@@ -175,9 +185,35 @@ private fun AccountRow(account: AccountManageUi, onDelete: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
+        TextButton(onClick = { showSignature = true }) {
+            Text("签名", style = MailTypeScale.meta)
+        }
         TextButton(onClick = { showConfirm = true }) {
             Text("删除", style = MailTypeScale.meta, color = MaterialTheme.colorScheme.error)
         }
+    }
+    if (showSignature) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showSignature = false },
+            title = { Text("邮件签名") },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = signatureText,
+                    onValueChange = { signatureText = it },
+                    placeholder = { Text("例：发自 Material Mail") },
+                    minLines = 2,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignature = false
+                    onUpdateSignature(signatureText.ifBlank { null })
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignature = false }) { Text("取消") }
+            },
+        )
     }
     if (showConfirm) {
         androidx.compose.material3.AlertDialog(

@@ -34,7 +34,7 @@ import com.materialmail.core.database.entity.ThreadEntity
         DraftEntity::class,
         LabelEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

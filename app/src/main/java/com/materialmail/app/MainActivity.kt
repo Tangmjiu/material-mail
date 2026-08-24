@@ -248,6 +248,7 @@ fun MaterialMailNavHost(
                         database = container.database,
                         messageSender = container.messageSender,
                         bodyLoader = container.bodyLoader,
+                        contactSuggester = container.contactSuggester,
                     ),
                 )
                 ComposerScreen(

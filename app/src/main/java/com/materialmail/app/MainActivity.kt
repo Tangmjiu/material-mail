@@ -45,13 +45,55 @@ import com.materialmail.feature.settings.yolo.YoloScreen
 import com.materialmail.feature.settings.yolo.YoloViewModel
 
 class MainActivity : ComponentActivity() {
+
+    /** mailto: / 分享 / Shortcut 的待处理写信请求。 */
+    private val pendingCompose =
+        androidx.compose.runtime.mutableStateOf<ComposeRequest?>(null)
+
+    data class ComposeRequest(
+        val to: String? = null,
+        val subject: String? = null,
+        val body: String? = null,
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        pendingCompose.value = parseIntent(intent)
         setContent {
             MaterialMailTheme {
-                MaterialMailNavHost(container = (application as MaterialMailApp).container)
+                MaterialMailNavHost(
+                    container = (application as MaterialMailApp).container,
+                    pendingCompose = pendingCompose,
+                )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        parseIntent(intent)?.let { pendingCompose.value = it }
+    }
+
+    private fun parseIntent(intent: android.content.Intent?): ComposeRequest? {
+        if (intent == null) return null
+        return when {
+            intent.action == "com.materialmail.action.COMPOSE" -> ComposeRequest()
+            intent.action == android.content.Intent.ACTION_VIEW &&
+                intent.data?.scheme == "mailto" -> {
+                val uri = intent.data!!
+                ComposeRequest(
+                    to = uri.schemeSpecificPart.substringBefore('?'),
+                    subject = uri.getQueryParameter("subject"),
+                    body = uri.getQueryParameter("body"),
+                )
+            }
+            intent.action == android.content.Intent.ACTION_SEND ->
+                ComposeRequest(
+                    subject = intent.getStringExtra(android.content.Intent.EXTRA_SUBJECT),
+                    body = intent.getStringExtra(android.content.Intent.EXTRA_TEXT),
+                )
+            else -> null
         }
     }
 }
@@ -64,9 +106,23 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MaterialMailNavHost(
     container: AppContainer,
+    pendingCompose: androidx.compose.runtime.MutableState<MainActivity.ComposeRequest?>,
     navController: NavHostController = rememberNavController(),
 ) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+
+    // mailto:/分享/Shortcut：NavHost 就绪后跳写信页
+    androidx.compose.runtime.LaunchedEffect(pendingCompose.value) {
+        val request = pendingCompose.value ?: return@LaunchedEffect
+        pendingCompose.value = null
+        navController.navigate(
+            ComposerRoutes.newPrefilled(
+                to = request.to,
+                subject = request.subject,
+                body = request.body,
+            ),
+        )
+    }
     SharedTransitionLayout {
         NavHost(navController = navController, startDestination = InboxRoutes.INBOX) {
             composable(InboxRoutes.INBOX) {
@@ -221,6 +277,9 @@ fun MaterialMailNavHost(
                     navArgument(ComposerRoutes.ARG_DRAFT_ID) { defaultValue = "" },
                     navArgument(ComposerRoutes.ARG_REPLY_TO) { defaultValue = "" },
                     navArgument(ComposerRoutes.ARG_MODE) { defaultValue = "NEW" },
+                    navArgument(ComposerRoutes.ARG_PREFILL_TO) { defaultValue = "" },
+                    navArgument(ComposerRoutes.ARG_PREFILL_SUBJECT) { defaultValue = "" },
+                    navArgument(ComposerRoutes.ARG_PREFILL_BODY) { defaultValue = "" },
                 ),
                 enterTransition = {
                     androidx.compose.animation.slideInVertically(
@@ -249,6 +308,12 @@ fun MaterialMailNavHost(
                         messageSender = container.messageSender,
                         bodyLoader = container.bodyLoader,
                         contactSuggester = container.contactSuggester,
+                        prefillTo = entry.arguments?.getString(ComposerRoutes.ARG_PREFILL_TO)
+                            ?.takeIf { it.isNotBlank() },
+                        prefillSubject = entry.arguments?.getString(ComposerRoutes.ARG_PREFILL_SUBJECT)
+                            ?.takeIf { it.isNotBlank() },
+                        prefillBody = entry.arguments?.getString(ComposerRoutes.ARG_PREFILL_BODY)
+                            ?.takeIf { it.isNotBlank() },
                     ),
                 )
                 ComposerScreen(

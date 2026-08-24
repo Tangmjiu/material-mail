@@ -62,6 +62,9 @@ class ComposerViewModel(
     private val draftId: DraftId?,
     private val replyToMessageId: MessageId?,
     private val mode: ComposeMode,
+    private val prefillTo: String?,
+    private val prefillSubject: String?,
+    private val prefillBody: String?,
     private val database: MaterialMailDatabase,
     private val messageSender: MessageSender,
     private val bodyLoader: BodyLoader,
@@ -97,6 +100,13 @@ class ComposerViewModel(
         when {
             draftId != null -> loadDraft(draftId)
             replyToMessageId != null -> prefillFromOriginal(account.email)
+            mode == ComposeMode.NEW -> _uiState.update {
+                it.copy(
+                    to = prefillTo ?: "",
+                    subject = prefillSubject ?: "",
+                    body = prefillBody ?: "",
+                )
+            }
         }
         // 签名：新邮件追加在末尾；回复/转发时插在引用之前（" -- " 是签名分隔惯例）
         account.signature?.takeIf { it.isNotBlank() }?.let { signature ->
@@ -347,11 +357,14 @@ class ComposerViewModel(
             messageSender: MessageSender,
             bodyLoader: BodyLoader,
             contactSuggester: ContactSuggester,
+            prefillTo: String? = null,
+            prefillSubject: String? = null,
+            prefillBody: String? = null,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 ComposerViewModel(
                     draftId, replyToMessageId, mode, database, messageSender, bodyLoader,
-                    contactSuggester,
+                    contactSuggester, prefillTo, prefillSubject, prefillBody,
                 )
             }
         }

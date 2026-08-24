@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="compose"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:shortcutShortLabel="@string/shortcut_compose"
+        android:shortcutLongLabel="@string/shortcut_compose_long">
+        <intent
+            android:action="com.materialmail.action.COMPOSE"
+            android:targetPackage="com.materialmail"
+            android:targetClass="com.materialmail.app.MainActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

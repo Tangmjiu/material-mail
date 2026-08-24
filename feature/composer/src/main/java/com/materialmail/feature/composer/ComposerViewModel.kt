@@ -108,6 +108,10 @@ class ComposerViewModel(
                 )
             }
         }
+        // 快速回复模板：插在引用之前
+        if (replyToMessageId != null && !prefillBody.isNullOrBlank()) {
+            _uiState.update { it.copy(body = prefillBody + "\n" + it.body) }
+        }
         // 签名：新邮件追加在末尾；回复/转发时插在引用之前（" -- " 是签名分隔惯例）
         account.signature?.takeIf { it.isNotBlank() }?.let { signature ->
             if (draftId == null) {
@@ -246,6 +250,11 @@ class ComposerViewModel(
     }
     fun onSubjectChanged(v: String) = _uiState.update { it.copy(subject = v) }
     fun onBodyChanged(v: String) = _uiState.update { it.copy(body = v) }
+
+    /** 模板插入：追加到当前正文末尾。 */
+    fun insertIntoBody(text: String) = _uiState.update {
+        it.copy(body = if (it.body.isBlank()) text else it.body + "\n\n" + text)
+    }
 
     // ── 草稿自动保存（防抖 800ms，内容非空才落库）──────────────
 

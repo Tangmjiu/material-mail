@@ -1,9 +1,13 @@
 package com.materialmail.feature.composer
 
+/** Composer 附加动作（Pro 注入点）。 */
+data class ComposerExtraAction(val label: String, val onClick: () -> Unit)
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +42,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +67,8 @@ fun ComposerScreen(
     viewModel: ComposerViewModel,
     mode: ComposeMode,
     onClose: () -> Unit,
+    /** Pro 动作槽（模板/定时发送等，pro:app 注入；Community 恒空）。 */
+    extraActions: List<ComposerExtraAction> = emptyList(),
     onSent: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -117,6 +126,25 @@ fun ComposerScreen(
                         )
                     },
                     actions = {
+                        if (extraActions.isNotEmpty()) {
+                            var menuOpen by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
+                                }
+                                androidx.compose.material3.DropdownMenu(
+                                    expanded = menuOpen,
+                                    onDismissRequest = { menuOpen = false },
+                                ) {
+                                    extraActions.forEach { action ->
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = { Text(action.label) },
+                                            onClick = { menuOpen = false; action.onClick() },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         IconButton(
                             onClick = { attachmentPicker.launch(arrayOf("*/*")) },
                             enabled = !uiState.sending,

@@ -16,6 +16,10 @@ object ComposerRoutes {
     fun new(): String = "composer?mode=NEW"
     fun reply(messageId: String, replyAll: Boolean): String =
         "composer?replyTo=$messageId&mode=" + (if (replyAll) "REPLY_ALL" else "REPLY")
+
+    /** 带预填正文的回复（快速回复模板用）。 */
+    fun replyPrefilled(messageId: String, body: String): String =
+        "composer?replyTo=$messageId&mode=REPLY&prefillBody=" + Uri.encode(body)
     fun forward(messageId: String): String = "composer?replyTo=$messageId&mode=FORWARD"
     fun editDraft(draftId: String): String = "composer?draftId=$draftId&mode=NEW"
 

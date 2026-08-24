@@ -58,6 +58,10 @@ fun MaterialMailNavHost(
     extraGraph: androidx.navigation.NavGraphBuilder.(AppContainer, NavHostController) -> Unit = { _, _ -> },
     /** Pro 功能入口（pro:app 按授权态计算；Community 恒为空列表）。 */
     proEntries: (NavHostController) -> List<com.materialmail.feature.settings.ProEntry> = { emptyList() },
+    /** Pro 详情页动作槽（Snooze/快速回复等）。 */
+    detailExtras: () -> List<com.materialmail.feature.inbox.DetailExtraAction> = { emptyList() },
+    /** Pro 写信页动作槽（模板/定时发送），参数为该页的 ViewModel。 */
+    composerExtras: (com.materialmail.feature.composer.ComposerViewModel) -> List<com.materialmail.feature.composer.ComposerExtraAction> = { emptyList() },
 ) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
 
@@ -224,6 +228,7 @@ fun MaterialMailNavHost(
                 ThreadDetailScreen(
                     viewModel = viewModel,
                     threadId = threadId,
+                    extraActions = detailExtras(),
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this,
                     onBack = { navController.popBackStack() },
@@ -287,6 +292,7 @@ fun MaterialMailNavHost(
                 ComposerScreen(
                     viewModel = viewModel,
                     mode = mode,
+                    extraActions = composerExtras(viewModel),
                     onClose = { navController.popBackStack() },
                     onSent = { navController.popBackStack() },
                 )

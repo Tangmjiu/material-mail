@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.automirrored.outlined.Reply
@@ -37,6 +38,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.materialmail.designsystem.theme.MailTheme
 import com.materialmail.designsystem.theme.MailTypeScale
+
+/** 详情页附加动作（Pro 功能注入点：Snooze / 快速回复等）。 */
+data class DetailExtraAction(
+    val label: String,
+    val onClick: (latestMessageId: String, threadId: String) -> Unit,
+)
 
 /**
  * 会话详情。与列表项构成容器变换对（sharedElement key 相同）。
@@ -60,6 +69,8 @@ fun ThreadDetailScreen(
     onReply: (messageId: String) -> Unit,
     onReplyAll: (messageId: String) -> Unit,
     onForward: (messageId: String) -> Unit,
+    /** Pro 动作槽（pro:app 注入；Community 恒空）。 */
+    extraActions: List<DetailExtraAction> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -142,6 +153,28 @@ fun ThreadDetailScreen(
                                     Icons.AutoMirrored.Outlined.Forward,
                                     contentDescription = "转发",
                                 )
+                            }
+                            if (extraActions.isNotEmpty()) {
+                                var menuOpen by remember { mutableStateOf(false) }
+                                Box {
+                                    IconButton(onClick = { menuOpen = true }) {
+                                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多操作")
+                                    }
+                                    androidx.compose.material3.DropdownMenu(
+                                        expanded = menuOpen,
+                                        onDismissRequest = { menuOpen = false },
+                                    ) {
+                                        extraActions.forEach { action ->
+                                            androidx.compose.material3.DropdownMenuItem(
+                                                text = { Text(action.label) },
+                                                onClick = {
+                                                    menuOpen = false
+                                                    action.onClick(latestMessageId, threadId)
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     },

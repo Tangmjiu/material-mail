@@ -28,7 +28,7 @@ class SyncWorker(
             is SyncResult.Failure ->
                 if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
             is SyncResult.Success -> {
-                NewMailNotifier(applicationContext).notifyNewMail(result.newMessageCount)
+                NewMailNotifier(applicationContext).notifyNewMail(result.newInboxMails)
                 Result.success()
             }
             else -> Result.success()

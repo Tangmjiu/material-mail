@@ -43,15 +43,32 @@ class SyncEngine(
         return try {
             client.connect(account.imap.toServerConfig(), credentials)
             var newCount = 0
+            val newInboxMessageIds = mutableListOf<String>()
             database.withTransaction {
                 val folders = folderSyncer.syncFolderList(client, account)
                 for (folder in folders.filter { it.role != FolderRole.CUSTOM }) {
-                    newCount += folderSyncer.syncMessages(client, account, folder)
+                    val newIds = folderSyncer.syncMessages(client, account, folder)
+                    newCount += newIds.size
+                    if (folder.role == FolderRole.INBOX) newInboxMessageIds += newIds
                 }
                 threadBuilder.rebuildForAccount(accountId)
             }
+            // threading 完成后才能把消息映射到线程（通知的归档/删除 Action 需要 threadId）
+            val newMails = newInboxMessageIds.mapNotNull { id ->
+                database.messageDao().getById(id)?.let { entity ->
+                    entity.threadId.takeIf { !it.startsWith("tmp:") }?.let { threadId ->
+                        NewMailInfo(
+                            threadId = threadId,
+                            senderName = com.materialmail.core.database.Converters
+                                .participantsFromJson(entity.fromJson)
+                                .firstOrNull()?.displayName ?: "未知发件人",
+                            subject = entity.subject,
+                        )
+                    }
+                }
+            }.distinctBy { it.threadId }
             accountDao.updateSyncState(accountId.value, SyncState.SYNCED.name)
-            SyncResult.Success(newCount)
+            SyncResult.Success(newCount, newMails)
         } catch (e: Exception) {
             accountDao.updateSyncState(accountId.value, SyncState.ERROR.name)
             SyncResult.Failure(e.message ?: e.javaClass.simpleName)
@@ -65,15 +82,19 @@ class SyncEngine(
         val accounts = database.accountDao().observeAll().first()
         if (accounts.isEmpty()) return SyncResult.Success(0)
         var totalNew = 0
+        val allNewMails = mutableListOf<NewMailInfo>()
         var firstFailure: SyncResult.Failure? = null
         for (entity in accounts) {
             when (val result = syncAccount(AccountId(entity.id))) {
-                is SyncResult.Success -> totalNew += result.newMessageCount
+                is SyncResult.Success -> {
+                    totalNew += result.newMessageCount
+                    allNewMails += result.newInboxMails
+                }
                 is SyncResult.Failure -> if (firstFailure == null) firstFailure = result
                 SyncResult.NoCredentials -> Unit
             }
         }
-        return firstFailure ?: SyncResult.Success(totalNew)
+        return firstFailure ?: SyncResult.Success(totalNew, allNewMails)
     }
 
     private fun ServerEndpoint.toServerConfig(): ServerConfig = ServerConfig(

@@ -34,8 +34,8 @@ class FolderSyncer(private val database: MaterialMailDatabase) {
         return folders
     }
 
-    /** 同步单个文件夹的消息元数据，返回新增邮件数。 */
-    suspend fun syncMessages(client: ImapClient, account: Account, folder: Folder): Int {
+    /** 同步单个文件夹的消息元数据，返回新增邮件的本地 id 列表。 */
+    suspend fun syncMessages(client: ImapClient, account: Account, folder: Folder): List<String> {
         val messageDao = database.messageDao()
         val folderId = folder.id.value
 
@@ -61,7 +61,7 @@ class FolderSyncer(private val database: MaterialMailDatabase) {
         }
 
         database.folderDao().updateUnreadCount(folderId, folder.unreadCount.coerceAtLeast(0))
-        return newEnvelopes.size
+        return newEnvelopes.map { folder.id.value + "#" + it.uid }
     }
 
     private fun RemoteFolder.toModel(account: Account): Folder = Folder(

@@ -22,3 +22,4 @@ secrets.properties
 
 # ── Pro 闭源码在私有仓库正常提交；本规则仅防御"社区版发布脚本"误打包 ──
 # （pro/ 目录不忽略，同步时由 tools/publish-community 按路径剔除）
+.kotlin/

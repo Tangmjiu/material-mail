@@ -19,9 +19,13 @@ class FtsSearchProvider(
 
     override suspend fun search(accountId: String?, query: String): List<SearchHit> {
         val ftsQuery = buildFtsQuery(query) ?: return emptyList()
-        return database.searchDao()
-            .search(ftsQuery, accountId, limit = MAX_RESULTS)
-            .map {
+        val rows = runCatching {
+            database.searchDao().search(ftsQuery, accountId, limit = MAX_RESULTS)
+        }.getOrElse {
+            // FTS 失败（语法/分词器差异）→ LIKE 退化：宁可慢，不可无结果
+            database.searchDao().searchLike("%" + query.trim() + "%", accountId, MAX_RESULTS)
+        }
+        return rows.map {
                 SearchHit(
                     messageId = MessageId(it.id),
                     threadId = ThreadId(it.threadId),
@@ -45,7 +49,15 @@ class FtsSearchProvider(
                 .filter { it.isNotEmpty() }
             if (tokens.isEmpty()) return null
             return tokens.joinToString(" AND ") { token ->
-                "\"" + token.replace("\"", "\"\"") + "\"" + "*"
+                if (token.matches(Regex("[\\p{L}\\p{N}]+"))) {
+                    // 纯词元：FTS 前缀匹配。CJK 整句被 simple tokenizer 当单 token，
+                    // 不带 * 时"发票"永远匹配不到"发票开具通知"——这是中文搜索的关键。
+                    // 注意 FTS4 只认不带引号的 token*，"token"* 是语法错误（旧实现的 bug）。
+                    token + "*"
+                } else {
+                    // 含 @ . - 等字符：引号短语，防止被当 FTS 运算符解析
+                    "\"" + token.replace("\"", "\"\"") + "\""
+                }
             }
         }
     }

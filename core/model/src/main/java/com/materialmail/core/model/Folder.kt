@@ -6,6 +6,7 @@ enum class FolderRole {
     DRAFTS,
     TRASH,
     ARCHIVE,
+    JUNK,
     CUSTOM,
 }
 

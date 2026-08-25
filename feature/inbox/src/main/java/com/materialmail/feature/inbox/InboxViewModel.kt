@@ -322,5 +322,6 @@ internal fun localizedFolderName(role: FolderRole, serverName: String): String =
     FolderRole.DRAFTS -> "草稿箱"
     FolderRole.TRASH -> "已删除"
     FolderRole.ARCHIVE -> "归档"
+    FolderRole.JUNK -> "垃圾邮件"
     FolderRole.CUSTOM -> serverName
 }

@@ -20,4 +20,15 @@ interface SearchDao {
             "ORDER BY m.sentAtEpochMs DESC LIMIT :limit",
     )
     suspend fun search(ftsQuery: String, accountId: String?, limit: Int): List<MessageEntity>
+
+    /** LIKE 兜底（FTS 失败/无结果时的退路，直接在 messages 上模糊匹配）。 */
+    @Query(
+        "SELECT m.* FROM messages m " +
+            "JOIN folders f ON m.folderId = f.id " +
+            "WHERE (m.subject LIKE :pattern OR m.snippet LIKE :pattern " +
+            "OR m.fromAddress LIKE :pattern) " +
+            "AND (:accountId IS NULL OR f.accountId = :accountId) " +
+            "ORDER BY m.sentAtEpochMs DESC LIMIT :limit",
+    )
+    suspend fun searchLike(pattern: String, accountId: String?, limit: Int): List<MessageEntity>
 }

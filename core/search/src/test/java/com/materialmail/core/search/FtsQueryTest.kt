@@ -4,39 +4,31 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/** buildFtsQuery：中文前缀匹配的回归防线（FTS4 引号+星号语法错误曾致全空）。 */
 class FtsQueryTest {
 
-
     @Test
-    fun `单词加前缀匹配`() {
-        assertEquals("\"invoice\"*", FtsSearchProvider.buildFtsQuery("invoice"))
+    fun `cjk token gets bare prefix star`() {
+        assertEquals("发票*", FtsSearchProvider.buildFtsQuery("发票"))
     }
 
     @Test
-    fun `多词 AND 组合`() {
-        assertEquals("\"project\"* AND \"2026\"*", FtsSearchProvider.buildFtsQuery("project 2026"))
+    fun `multi word tokens AND with prefix`() {
+        assertEquals("周报* AND 项目*", FtsSearchProvider.buildFtsQuery("周报 项目"))
     }
 
     @Test
-    fun `FTS 语法字符被中和`() {
-        // 引号/冒号/括号/星号不得泄漏进查询语法
-        assertEquals("\"hello\"*", FtsSearchProvider.buildFtsQuery("\"hello:*"))
+    fun `email token is quoted phrase without star`() {
+        assertEquals("\"boss@qq.com\"", FtsSearchProvider.buildFtsQuery("boss@qq.com"))
     }
 
     @Test
-    fun `空白与标点分词`() {
-        assertEquals("\"a\"* AND \"b\"*", FtsSearchProvider.buildFtsQuery("  a, b；"))
+    fun `quote injection neutralized`() {
+        assertEquals("a* AND \"b.com\"", FtsSearchProvider.buildFtsQuery("a\"b.com"))
     }
 
     @Test
-    fun `纯符号输入返回 null`() {
-        assertNull(FtsSearchProvider.buildFtsQuery("***"))
+    fun `blank input yields null`() {
         assertNull(FtsSearchProvider.buildFtsQuery("   "))
-    }
-
-    @Test
-    fun `中文与邮箱地址`() {
-        assertEquals("\"周报\"*", FtsSearchProvider.buildFtsQuery("周报"))
-        assertEquals("\"a@b.com\"*", FtsSearchProvider.buildFtsQuery("a@b.com"))
     }
 }

@@ -46,7 +46,8 @@ class SyncEngine(
             val newInboxMessageIds = mutableListOf<String>()
             database.withTransaction {
                 val folders = folderSyncer.syncFolderList(client, account)
-                for (folder in folders.filter { it.role != FolderRole.CUSTOM }) {
+                // 全部文件夹（角色推断修复后，CUSTOM 是用户自建文件夹，也要同步）
+                for (folder in folders) {
                     val newIds = folderSyncer.syncMessages(client, account, folder)
                     newCount += newIds.size
                     if (folder.role == FolderRole.INBOX) newInboxMessageIds += newIds

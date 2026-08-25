@@ -86,20 +86,22 @@ fun MaterialMailNavHost(
         NavHost(
             navController = navController,
             startDestination = InboxRoutes.INBOX,
-            // MD3E 默认转场：淡入 + 轻微缩放的 fade-through，spring 物理（不生硬）；
-            // 详情页另由容器变换接管，与此叠加不冲突
+            // MD3E 标准 shared-axis Z 转场：前进=新页 0.8→1 弹入+淡入，旧页淡出；
+            // 返回=旧页 1→0.8 缩出+淡出，新页淡入。详情页容器变换与此叠加不冲突。
             enterTransition = {
                 androidx.compose.animation.fadeIn(motionScheme.defaultEffectsSpec()) +
                     androidx.compose.animation.scaleIn(
-                        motionScheme.defaultSpatialSpec(), initialScale = 0.96f)
+                        motionScheme.defaultSpatialSpec(), initialScale = 0.8f)
             },
             exitTransition = { androidx.compose.animation.fadeOut(motionScheme.defaultEffectsSpec()) },
             popEnterTransition = {
-                androidx.compose.animation.fadeIn(motionScheme.defaultEffectsSpec()) +
-                    androidx.compose.animation.scaleIn(
-                        motionScheme.defaultSpatialSpec(), initialScale = 0.96f)
+                androidx.compose.animation.fadeIn(motionScheme.defaultEffectsSpec())
             },
-            popExitTransition = { androidx.compose.animation.fadeOut(motionScheme.defaultEffectsSpec()) },
+            popExitTransition = {
+                androidx.compose.animation.fadeOut(motionScheme.defaultEffectsSpec()) +
+                    androidx.compose.animation.scaleOut(
+                        motionScheme.defaultSpatialSpec(), targetScale = 0.8f)
+            },
         ) {
             composable(InboxRoutes.INBOX) {
                 val windowWidthClass = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()

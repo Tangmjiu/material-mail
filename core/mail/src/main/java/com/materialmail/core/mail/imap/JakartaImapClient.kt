@@ -356,6 +356,7 @@ class JakartaImapClient : ImapClient {
             attrs.any { it == "\\sent" } || decodedName in SENT_NAMES -> FolderRole.SENT
             attrs.any { it == "\\drafts" } || decodedName in DRAFT_NAMES -> FolderRole.DRAFTS
             attrs.any { it == "\\trash" } || decodedName in TRASH_NAMES -> FolderRole.TRASH
+            attrs.any { it == "\\junk" } || decodedName in JUNK_NAMES -> FolderRole.JUNK
             attrs.any { it == "\\archive" || it == "\\all" } || decodedName in ARCHIVE_NAMES ->
                 FolderRole.ARCHIVE
             else -> FolderRole.CUSTOM
@@ -396,9 +397,10 @@ class JakartaImapClient : ImapClient {
 
         val REFERENCE_REGEX = Regex("<[^>]+>")
 
-        val SENT_NAMES = setOf("Sent", "Sent Items", "Sent Mail", "已发送", "已发送邮件")
-        val DRAFT_NAMES = setOf("Drafts", "草稿", "草稿箱")
-        val TRASH_NAMES = setOf("Trash", "Deleted", "Deleted Items", "已删除", "回收站")
+        val SENT_NAMES = setOf("Sent", "Sent Items", "Sent Mail", "Sent Messages", "已发送", "已发送邮件", "已发邮件")
+        val DRAFT_NAMES = setOf("Drafts", "Draft", "草稿", "草稿箱")
+        val TRASH_NAMES = setOf("Trash", "Deleted", "Deleted Items", "Deleted Messages", "已删除", "已删除邮件", "回收站")
         val ARCHIVE_NAMES = setOf("Archive", "All Mail", "归档", "全部邮件")
+        val JUNK_NAMES = setOf("Junk", "Junk E-mail", "Spam", "垃圾邮件", "垃圾箱")
     }
 }

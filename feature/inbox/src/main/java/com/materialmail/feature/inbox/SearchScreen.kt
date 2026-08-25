@@ -43,7 +43,7 @@ import com.materialmail.designsystem.theme.MailTypeScale
  * 本地搜索。纯本地 FTS，零网络（Local-first）。
  * 结果行复用 MailListItem：同一套排版层级，搜索结果不另起设计语言。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
@@ -90,7 +90,7 @@ fun SearchScreen(
         }) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             if (uiState.searching) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                androidx.compose.material3.LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             when {
                 uiState.searchedEmpty -> Box(

@@ -18,10 +18,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
@@ -59,7 +61,7 @@ import com.materialmail.designsystem.theme.MailTypeScale
  * - 正文排版 = composerBody（bodyLarge，行高 1.6）；
  * - 关闭不丢内容：草稿防抖自动保存，退出即已落库。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ComposerScreen(
     viewModel: ComposerViewModel,
@@ -121,23 +123,6 @@ fun ComposerScreen(
                             style = MaterialTheme.typography.titleLarge)
                     },
                     actions = {
-                        if (extraActions.isNotEmpty()) {
-                            var menuOpen by remember { mutableStateOf(false) }
-                            Box {
-                                IconButton(onClick = { menuOpen = true }) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
-                                }
-                                androidx.compose.material3.DropdownMenu(
-                                    expanded = menuOpen,
-                                    onDismissRequest = { menuOpen = false }) {
-                                    extraActions.forEach { action ->
-                                        androidx.compose.material3.DropdownMenuItem(
-                                            text = { Text(action.label) },
-                                            onClick = { menuOpen = false; action.onClick() })
-                                    }
-                                }
-                            }
-                        }
                         IconButton(
                             onClick = { attachmentPicker.launch(arrayOf("*/*")) },
                             enabled = !uiState.sending) {
@@ -151,21 +136,55 @@ fun ComposerScreen(
                             style = MailTypeScale.meta,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(MailTheme.spacing.sm))
-                        IconButton(onClick = viewModel::send, enabled = !uiState.sending) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Send,
-                                contentDescription = "发送",
-                                tint = if (uiState.sending) {
-                                    MaterialTheme.colorScheme.outline
-                                } else {
-                                    MaterialTheme.colorScheme.primary
-                                })
+                        if (extraActions.isEmpty()) {
+                            IconButton(onClick = viewModel::send, enabled = !uiState.sending) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.Send,
+                                    contentDescription = "发送",
+                                    tint = if (uiState.sending) {
+                                        MaterialTheme.colorScheme.outline
+                                    } else {
+                                        MaterialTheme.colorScheme.primary
+                                    })
+                            }
+                        } else {
+                            // MD3E SplitButton：主键=发送，▾=Pro 发送选项（定时发送/模板）
+                            var menuOpen by remember { mutableStateOf(false) }
+                            Box {
+                                SplitButtonLayout(
+                                    leadingButton = {
+                                        androidx.compose.material3.FilledIconButton(
+                                            onClick = viewModel::send,
+                                            enabled = !uiState.sending) {
+                                            Icon(
+                                                Icons.AutoMirrored.Outlined.Send,
+                                                contentDescription = "发送")
+                                        }
+                                    },
+                                    trailingButton = {
+                                        androidx.compose.material3.FilledTonalIconButton(
+                                            onClick = { menuOpen = true }) {
+                                            Icon(
+                                                Icons.Outlined.ArrowDropDown,
+                                                contentDescription = "更多发送选项")
+                                        }
+                                    })
+                                androidx.compose.material3.DropdownMenu(
+                                    expanded = menuOpen,
+                                    onDismissRequest = { menuOpen = false }) {
+                                    extraActions.forEach { action ->
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = { Text(action.label) },
+                                            onClick = { menuOpen = false; action.onClick() })
+                                    }
+                                }
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface))
                 if (uiState.sending) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    androidx.compose.material3.LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
         }) { innerPadding ->

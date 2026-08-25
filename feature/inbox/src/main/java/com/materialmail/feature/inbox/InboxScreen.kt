@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.core.animateDpAsState
@@ -59,6 +61,8 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -79,6 +83,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -112,6 +117,8 @@ fun InboxScreen(
     onEditDraft: (draftId: String) -> Unit,
     onSearch: () -> Unit,
     onOpenSettings: () -> Unit,
+    /** 双栏嵌入模式：隐藏底部导航与 FAB（由 WideNavigationRail 接管）。 */
+    embedded: Boolean = false,
     modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -178,7 +185,7 @@ fun InboxScreen(
             modifier = modifier,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                if (uiState is InboxUiState.Ready) {
+                if (uiState is InboxUiState.Ready && !embedded) {
                     NavigationBar {
                         NavigationBarItem(
                             selected = true,
@@ -195,7 +202,7 @@ fun InboxScreen(
             },
             floatingActionButton = {
                 // MD3E：FAB 随滚动 morph —— 静止 28dp 圆角方块，滚动中弹成圆形（spring 物理）
-                if (uiState is InboxUiState.Ready) {
+                if (uiState is InboxUiState.Ready && !embedded) {
                     val fabCorner by animateDpAsState(
                         targetValue = if (listState.isScrollInProgress) 48.dp else 28.dp,
                         animationSpec = MailTheme.motionScheme.defaultSpatialSpec(),
@@ -236,40 +243,56 @@ fun InboxScreen(
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh))
-                } else {
-                TopAppBar(
-                    navigationIcon = {
-                        if (uiState is InboxUiState.Ready) {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Outlined.Menu, contentDescription = "打开文件夹导航")
-                            }
-                        }
-                    },
-                    title = {
-                        Column {
-                            Text(
-                                inboxTitle(uiState),
-                                style = MaterialTheme.typography.titleLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis)
-                            (uiState as? InboxUiState.Ready)?.let {
-                                Text(
-                                    it.accountEmail,
-                                    style = MailTypeScale.meta,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    },
-                    actions = {
-                        if ((uiState as? InboxUiState.Ready)?.syncing == true) {
-                            LoadingIndicator(
-                                modifier = Modifier.padding(end = 16.dp).size(32.dp))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface))
+                } else if (uiState is InboxUiState.Ready) {
+                    val readyState = uiState as InboxUiState.Ready
+                    // MD3E 搜索栏头部（邮件 App 的 Expressive 首屏标志）：
+                    // 菜单键内嵌搜索栏 + 占位文案带当前文件夹 + 账户徽章/同步波浪指示
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        SearchBar(
+                            inputField = {
+                                SearchBarDefaults.InputField(
+                                    state = rememberTextFieldState(),
+                                    onSearch = { onSearch() },
+                                    expanded = false,
+                                    onExpandedChange = { if (it) onSearch() },
+                                    readOnly = true,
+                                    placeholder = {
+                                        Text(
+                                            "搜索 · " + inboxTitle(uiState),
+                                            style = MailTypeScale.preview,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis)
+                                    },
+                                    leadingIcon = {
+                                        IconButton(onClick = {
+                                            scope.launch { drawerState.open() }
+                                        }) {
+                                            Icon(
+                                                Icons.Outlined.Menu,
+                                                contentDescription = "打开文件夹导航")
+                                        }
+                                    },
+                                    trailingIcon = {
+                                        if (readyState.syncing) {
+                                            LoadingIndicator(modifier = Modifier.size(28.dp))
+                                        } else {
+                                            com.materialmail.designsystem.component.MonogramAvatar(
+                                                name = readyState.accountEmail,
+                                                size = 32.dp,
+                                                modifier = Modifier.clickable {
+                                                    scope.launch { drawerState.open() }
+                                                })
+                                        }
+                                    })
+                            },
+                            expanded = false,
+                            onExpandedChange = { if (it) onSearch() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {}
+                    }
                 }
             }) { innerPadding ->
             when (val state = uiState) {
@@ -428,7 +451,7 @@ private fun ThreadList(
     animatedVisibilityScope: AnimatedVisibilityScope?,
     onOpenThread: (threadId: String) -> Unit) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-        items(items = threads, key = { it.threadId }) { thread ->
+        itemsIndexed(items = threads, key = { _, it -> it.threadId }) { index, thread ->
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
                     // 行不直接滑走：操作完成后由数据库状态驱动消失 + 邻近行 spring 补位
@@ -454,7 +477,9 @@ private fun ThreadList(
             )
             SwipeToDismissBox(
                 // 行删除/归档后，邻近行按 spring 物理补位（Expressive 默认 spec）
-                modifier = Modifier.animateItem(),
+                modifier = Modifier
+                    .animateItem()
+                    .staggeredEntrance(index),
                 state = dismissState,
                 // 多选模式下禁用滑动操作，避免手势冲突
                 enableDismissFromStartToEnd = !selecting,
@@ -631,5 +656,25 @@ private fun EmptyInboxState(folderName: String, modifier: Modifier = Modifier) {
             style = MailTypeScale.preview,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center)
+    }
+}
+
+/**
+ * 列表交错入场（MD3E motion）：首屏/滚动进入视口的行按 25ms 阶梯
+ * 延迟做 fade+上移，spring 收尾不生硬。上限 250ms 防止长列表末尾过久。
+ */
+private fun Modifier.staggeredEntrance(index: Int): Modifier = composed {
+    val progress = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay((index * 25L).coerceAtMost(250L))
+        progress.animateTo(
+            1f,
+            androidx.compose.animation.core.spring(
+                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+        )
+    }
+    graphicsLayer {
+        alpha = progress.value
+        translationY = (1f - progress.value) * 36f
     }
 }

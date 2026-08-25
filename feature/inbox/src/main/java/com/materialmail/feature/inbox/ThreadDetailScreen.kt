@@ -235,6 +235,12 @@ private fun MessageBlock(
             ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // 发件人徽章头像：色板哈希区分发件人（不拉取第三方头像，零隐私外泄）
+            com.materialmail.designsystem.component.MonogramAvatar(
+                name = message.fromName.ifBlank { message.fromAddress },
+                size = 40.dp,
+            )
+            Spacer(Modifier.width(MailTheme.spacing.md))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     message.fromName,

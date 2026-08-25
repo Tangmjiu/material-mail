@@ -6,6 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -46,6 +52,43 @@ fun TwoPaneHome(
     var selectedThread by rememberSaveable { mutableStateOf<String?>(null) }
 
     Row(modifier = Modifier.fillMaxSize()) {
+        // MD3E：宽屏用 WideNavigationRail（可展开/收起），写信 FAB 收进 rail header
+        val railState = androidx.compose.material3.rememberWideNavigationRailState()
+        val railExpanded = railState.currentValue ==
+            androidx.compose.material3.WideNavigationRailValue.Expanded
+        androidx.compose.material3.WideNavigationRail(
+            state = railState,
+            header = {
+                androidx.compose.material3.LargeFloatingActionButton(
+                    onClick = onCompose,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "写邮件")
+                }
+            },
+        ) {
+            androidx.compose.material3.WideNavigationRailItem(
+                selected = true,
+                onClick = {},
+                icon = { Icon(Icons.Outlined.Inbox, contentDescription = null) },
+                label = { Text("邮件") },
+                railExpanded = railExpanded,
+            )
+            androidx.compose.material3.WideNavigationRailItem(
+                selected = false,
+                onClick = onSearch,
+                icon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                label = { Text("搜索") },
+                railExpanded = railExpanded,
+            )
+            androidx.compose.material3.WideNavigationRailItem(
+                selected = false,
+                onClick = onOpenSettings,
+                icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                label = { Text("设置") },
+                railExpanded = railExpanded,
+            )
+        }
         Box(modifier = Modifier.width(400.dp).fillMaxHeight()) {
             val inboxViewModel: InboxViewModel = viewModel(
                 factory = InboxViewModel.factory(
@@ -55,6 +98,7 @@ fun TwoPaneHome(
                 ),
             )
             InboxScreen(
+                embedded = true,
                 viewModel = inboxViewModel,
                 sharedTransitionScope = null, // 双栏无容器变换
                 animatedVisibilityScope = null,

@@ -58,3 +58,7 @@ JDK 17+，Android SDK 36。中国大陆环境已默认配置阿里云 Maven 镜�
 
 提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 中的
 贡献者许可协议（CLA），提交即视为同意。
+
+## 包名与发布身份
+
+`:pro:app`（`com.materialmail`）是唯一正式发布版（GitHub Releases，收费）；`:app`（`com.materialmail.community`）只是开发者构建。接手项目前必读 `docs/PACKAGE-IDENTITY.md`，不要动 applicationId。
